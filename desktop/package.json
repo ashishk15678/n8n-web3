@@ -1,0 +1,21 @@
+{
+  "name": "desktop",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron --watch ."
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.8",
+    "electron": "^36.3.2",
+    "tailwindcss": "^4.1.8"
+  }
+}
