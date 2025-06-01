@@ -200,7 +200,10 @@ export function WalletButton() {
   }, []);
 
   return (
-    <div className="relative group flex justify-end" ref={dropdownRef}>
+    <div
+      className="absolute z-100 top-2 right-2 group flex justify-end"
+      ref={dropdownRef}
+    >
       <div className="flex flex-col items-end">
         {/* Main Button */}
         <button

@@ -4,11 +4,12 @@ import { Project, User } from "./generated/prisma";
 // API endpoints
 const API = {
   projects: {
-    list: (userId: string) => `/api/projects?userId=${userId}`,
+    list: () => `/api/projects`,
     create: "/api/projects",
+    get: (projectId: string) => `/api/projects?projectId=${projectId}`,
   },
   users: {
-    get: (id: string) => `/api/users/${id}`,
+    get: () => `/api/user`,
     create: "/api/users",
   },
 };
@@ -32,17 +33,24 @@ async function fetchAPI<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 // Query hooks
-export function useProject(userId: string) {
+export function useProject(projectId: string | undefined) {
+  if (projectId == undefined) {
+    return useQuery({
+      queryKey: ["projects"],
+      queryFn: () => fetchAPI<Project[]>(API.projects.list()),
+    });
+  }
+
   return useQuery({
-    queryKey: ["project", userId],
-    queryFn: () => fetchAPI<Project[]>(API.projects.list(userId)),
+    queryKey: ["project", projectId],
+    queryFn: () => fetchAPI<Project>(API.projects.get(projectId)),
   });
 }
 
-export function useUser(userId: string) {
+export function useUser() {
   return useQuery({
-    queryKey: ["user", userId],
-    queryFn: () => fetchAPI<User>(API.users.get(userId)),
+    queryKey: ["user"],
+    queryFn: () => fetchAPI<User>(API.users.get()),
   });
 }
 

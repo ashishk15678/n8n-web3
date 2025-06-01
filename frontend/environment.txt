@@ -1,0 +1,10 @@
+# Environment variables
+# Format: KEY=value
+# Values will be encrypted when set through the environment store
+
+API_KEY=default_api_key
+SECRET_KEY=default_secret_key
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+NODE_ENV=development
+
+

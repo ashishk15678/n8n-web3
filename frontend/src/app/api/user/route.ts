@@ -1,31 +1,30 @@
 import { prisma } from "@/lib/db";
 import { User } from "@/generated/prisma";
 import { tryCatch, validateRequired } from "@/lib/api-utils";
+import { auth } from "@/lib/auth";
 
 // GET /api/users/:id - Get a specific user
-export const GET = tryCatch(
-  async (request: Request, { params }: { params: { id: string } }) => {
-    const userId = params.id;
+export const GET = tryCatch(async (request: Request) => {
+  const authUser = (await auth.api.getSession({
+    headers: request.headers,
+  }))!.user;
+  if (!authUser) {
+    throw new Error("User not found");
+  }
 
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
+  const user = await prisma.user.findUnique({
+    where: { id: authUser.id },
+    include: {
+      projects: true,
+    },
+  });
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        projects: true,
-      },
-    });
+  if (!user) {
+    throw new Error("User not found");
+  }
 
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    return user;
-  },
-  "Failed to fetch user"
-);
+  return user;
+}, "Failed to fetch user");
 
 // POST /api/users - Create a new user
 export const POST = tryCatch(async (request: Request) => {

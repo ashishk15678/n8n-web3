@@ -1,26 +1,27 @@
 "use client";
 import { authClient } from "@/lib/auth";
-import { useCreateProject, useProject } from "@/server-store";
+import { useCreateProject, useProject, useUser } from "@/server-store";
 import { useNavigate } from "react-router-dom";
 import { useProject as getProject } from "@/store";
+import { Project } from "@/generated/prisma";
 
 export default function LandingPage() {
-  const { useSession } = authClient;
   const { mutate: createProject } = useCreateProject();
-  const { data: projects } = useProject(
-    useSession.get().data?.user.id as string
-  );
+
+  const { data: user } = useUser();
+
+  const { data: projects } = useProject(undefined);
   const navigate = useNavigate();
   const { setProject } = getProject();
   return (
     <div>
-      <pre>{JSON.stringify(useSession.get().data, null, 2)}</pre>
+      <pre>{JSON.stringify(user, null, 2)}</pre>
       <button
         onClick={() => {
           createProject({
-            userId: useSession.get().data?.user.id as string,
+            userId: user?.id as string,
             project: {
-              userId: useSession.get().data?.user.id as string,
+              userId: user?.id as string,
               name: "Test Project",
               description: "Test Description",
               id: crypto.randomUUID(),
@@ -34,7 +35,8 @@ export default function LandingPage() {
 
       <p className="text-2xl font-bold">All projects</p>
       <div className="flex flex-col gap-4">
-        {projects?.map((project) => (
+        {/* it gives me a ts error here */}
+        {(projects as Project[])?.map((project) => (
           <button
             key={project.id}
             onClick={() => {

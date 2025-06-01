@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { Project, User } from "./generated/prisma";
 import { Workflow } from "./types";
+import path from "path";
+import { Edge, Node } from "@xyflow/react";
 
 export const useUser = create<{
   user: User | null;
@@ -13,65 +15,48 @@ export const useUser = create<{
 export const useProject = create<{
   project: Project | null;
   setProject: (project: Project) => void;
+  projectLoading: boolean;
+  setProjectLoading: (projectLoading: boolean) => void;
 }>((set) => ({
   project: null,
   setProject: (project: Project) => set({ project }),
+  projectLoading: false,
+  setProjectLoading: (projectLoading: boolean) => set({ projectLoading }),
 }));
 
-export const appStore = create<{
-  isConnected: boolean;
-  setIsConnected: (isConnected: boolean) => void;
-  ethAddress: string | null;
-  setEthAddress: (ethAddress: string | null) => void;
-  solanaAddress: string | null;
-  setSolanaAddress: (solanaAddress: string | null) => void;
+export const loading = create<{
   loading: boolean;
   setLoading: (loading: boolean) => void;
-  error: string | null;
-  setError: (error: string | null) => void;
 }>((set) => ({
-  isConnected: false,
-  setIsConnected: (isConnected: boolean) => set({ isConnected }),
-  ethAddress: null,
-  setEthAddress: (ethAddress: string | null) => set({ ethAddress }),
-  solanaAddress: null,
-  setSolanaAddress: (solanaAddress: string | null) => set({ solanaAddress }),
   loading: false,
   setLoading: (loading: boolean) => set({ loading }),
-  error: null,
-  setError: (error: string | null) => set({ error }),
 }));
 
-export const workFlowStatus = create<{
-  curWorkFlow: Workflow | null;
-  setCurWorkFlow: (curWorkFlow: Workflow) => void;
-
-  workFlowLoading: boolean;
-  setWorkFlowLoading: (workFlowLoading: boolean) => void;
-
-  workflowsList: Workflow[];
-  setWorkflowsList: (workflowsList: Workflow[]) => void;
-
-  workFlowStatus: string | null;
-  setWorkFlowStatus: (workFlowStatus: string | null) => void;
-
-  workflowError: string | null;
-  setWorkflowError: (workflowError: string | null) => void;
+export const workFlow = create<{
+  nodes: Node[];
+  setNodes: (change: any) => void;
+  edges: Edge[];
+  setEdges: (edge: Edge) => void;
 }>((set) => ({
-  curWorkFlow: null,
-  setCurWorkFlow: (curWorkFlow: Workflow) => set({ curWorkFlow }),
-
-  workFlowLoading: false,
-  setWorkFlowLoading: (workFlowLoading: boolean) => set({ workFlowLoading }),
-
-  workFlowStatus: null,
-  setWorkFlowStatus: (workFlowStatus: string | null) => set({ workFlowStatus }),
-
-  workflowsList: [],
-  setWorkflowsList: (workflowsList: Workflow[]) => set({ workflowsList }),
-
-  workflowError: null,
-  setWorkflowError: (workflowError: string | null) => set({ workflowError }),
+  nodes: [],
+  setNodes: (change: any) =>
+    set((state) => {
+      if (change.type === "position") {
+        return {
+          nodes: state.nodes.map((node) =>
+            node.id === change.id
+              ? { ...node, position: change.position }
+              : node
+          ),
+        };
+      }
+      if (change.type === "add") {
+        return { nodes: [...state.nodes, change.node] };
+      }
+      return state;
+    }),
+  edges: [],
+  setEdges: (edge: Edge) => set((state) => ({ edges: [...state.edges, edge] })),
 }));
 
 export const workFlowExecutionStatus = create<{
@@ -81,4 +66,21 @@ export const workFlowExecutionStatus = create<{
   workFlowExecutionStatus: null,
   setWorkFlowExecutionStatus: (workFlowExecutionStatus: string | null) =>
     set({ workFlowExecutionStatus }),
+}));
+
+// TODO : Make Env
+const ENV_FILE_PATH = path.join(process.cwd(), "frontend", "environment.txt");
+export const useEnvironment = create<{
+  environment: { name: string; value: string }[];
+  setEnvironment: (environment: { name: string; value: string }) => void;
+  // loadEnvironment: () => void;
+}>((set) => ({
+  environment: [],
+  setEnvironment: (environment: { name: string; value: string }) =>
+    set((state) => ({
+      environment: [...state.environment, environment],
+    })),
+  // loadEnvironment: () => {
+  //   set({ environment: JSON.parse(environment) });
+  // },
 }));
