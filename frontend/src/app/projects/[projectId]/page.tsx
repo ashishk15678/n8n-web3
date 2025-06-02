@@ -2,9 +2,9 @@
 
 import "@/app/globals.css";
 
-import { useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { useProject } from "@/server-store";
+import { useProject, useUpdateWorkflow, useWorkflow } from "@/server-store";
 import {
   addEdge,
   Background,
@@ -26,23 +26,14 @@ import {
 } from "@/app/components/react-flow/custom-comp";
 import { Project } from "@/generated/prisma";
 import { workFlow } from "@/store";
-import { Plus, X } from "lucide-react";
+import { Loader2, Plus, Save, X } from "lucide-react";
 import { CodeEditor } from "@/app/components/code-editor/CodeEditor";
-
-type SendTokenNode = Node<{
-  label?: string;
-}>;
-
-// Add this style block at the top of the file, after imports
-const dialogStyles = `
-  dialog::backdrop {
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(4px);
-  }
-`;
 
 export default function ProjectRoute() {
   const { projectId } = useParams();
+  if (!projectId) {
+    return Navigate({ to: "/signin" });
+  }
   return <ProjectPageContent projectId={projectId as string} />;
 }
 
@@ -50,29 +41,61 @@ const nodeTypes = {
   sendtoken: SendToken,
 };
 
-const initialNodes = [
-  {
-    id: "1",
-    type: "sendtoken",
-    position: { x: 200, y: 200 },
-    data: {
-      label: "Send Token",
-    },
-  },
-];
-
 function ProjectPageContent({ projectId }: { projectId: string }) {
   const { data: project } = useProject(projectId);
-  const { nodes, edges, setNodes, setEdges } = workFlow();
+  const { data: workflowData, isLoading: isWorkflowLoading } =
+    useWorkflow(projectId);
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    loading,
+    setLoading,
+    debouncedUpdate,
+  } = workFlow();
+  const updateWorkflow = useUpdateWorkflow();
 
-  // Initialize nodes if empty
+  // Initialize workflow data when it's fetched
   useEffect(() => {
-    if (nodes.length === 0) {
-      initialNodes.forEach((node) => {
+    if (workflowData && !isWorkflowLoading) {
+      setNodes({ type: "remove", id: "all" });
+      setEdges({ type: "clear" });
+
+      workflowData.nodes.forEach((node) => {
         setNodes({ type: "add", node });
       });
+
+      workflowData.edges.forEach((edge) => {
+        setEdges(edge);
+      });
     }
-  }, []);
+  }, [workflowData, isWorkflowLoading]);
+
+  // Debounced update for any changes
+  useEffect(() => {
+    if (project && nodes.length > 0 && workflowData && !isWorkflowLoading) {
+      const hasChanges =
+        JSON.stringify(nodes) !== JSON.stringify(workflowData.nodes) ||
+        JSON.stringify(edges) !== JSON.stringify(workflowData.edges);
+
+      if (hasChanges) {
+        debouncedUpdate(() => {
+          updateWorkflow.mutate(
+            { projectId, nodes, edges },
+            {
+              onSuccess: () => {
+                console.log("Workflow updated after 10s delay");
+              },
+              onError: (error) => {
+                console.error("Failed to update workflow:", error);
+              },
+            }
+          );
+        });
+      }
+    }
+  }, [nodes, edges, project, workflowData, isWorkflowLoading]);
 
   const onNodesChange = useCallback(
     (changes: any) => {
@@ -127,16 +150,73 @@ function ProjectPageContent({ projectId }: { projectId: string }) {
               >
                 <Controls />
                 <Background variant={BackgroundVariant.Dots} size={2} />
-                {/* <MiniMap /> */}
+                {isWorkflowLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  </div>
+                )}
               </ReactFlow>
             </FlowProvider>
           </ReactFlowProvider>
         </div>
         <div className="w-1/4">
           <Slider />
+          <SaveButton />
         </div>
       </div>
     </div>
+  );
+}
+
+export function SaveButton() {
+  const { loading, setLoading } = workFlow();
+  const updateWorkflow = useUpdateWorkflow();
+  const { nodes, edges } = workFlow();
+  const { projectId } = useParams();
+
+  const handleSave = async () => {
+    if (!projectId) return;
+
+    setLoading(true);
+    try {
+      await updateWorkflow.mutateAsync(
+        { projectId, nodes, edges },
+        {
+          onSuccess: () => {
+            console.log("Workflow saved successfully");
+          },
+          onError: (error) => {
+            console.error("Failed to save workflow:", error);
+          },
+        }
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      className={`bg-green-100 text-green-600 px-2 py-0.5 rounded-lg absolute top-2 flex flex-row items-center gap-2 ${
+        loading ? "animate-pulse cursor-not-allowed" : "cursor-pointer"
+      }`}
+      disabled={loading}
+      onClick={handleSave}
+    >
+      {loading ? (
+        <>
+          <div className="animate-pulse rounded-full flex flex-row items-center gap-2">
+            <span className="">Saving...</span>
+            <Loader2 size={16} className="animate-spin text-green-500" />
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="">Save</span>
+          <Save size={16} />
+        </>
+      )}
+    </button>
   );
 }
 
@@ -230,18 +310,10 @@ export const CustomNodeModal = ({
   setIsOpen: React.Dispatch<boolean>;
 }) => {
   const [code, setCode] = useState<string>(`// Custom Node Component
-import React from 'react';
-import { Handle, Position } from '@xyflow/react';
 
-interface NodeData {
-  label: string;
-  type: 'input' | 'output' | 'default';
-  value?: string | number;
-  color?: string;
-}
 
-const CustomNode: React.FC<{ data: NodeData }> = ({ data }) => {
-  const { label, type, value, color = '#ff6b6b' } = data;
+  function({name,number}:{name:string,number:Number}){ 
+    const { label, type, value, color = '#ff6b6b' } = data;
 
   return (
     <div className="p-4 rounded-lg shadow-lg" style={{ borderColor: color }}>

@@ -4,6 +4,23 @@ import { Workflow } from "./types";
 import path from "path";
 import { Edge, Node } from "@xyflow/react";
 
+// Debounce helper
+let updateTimeout: NodeJS.Timeout;
+let pendingUpdate: (() => void) | null = null;
+
+const debounceUpdate = (callback: () => void, delay: number = 10000) => {
+  if (updateTimeout) {
+    clearTimeout(updateTimeout);
+  }
+  pendingUpdate = callback;
+  updateTimeout = setTimeout(() => {
+    if (pendingUpdate) {
+      pendingUpdate();
+      pendingUpdate = null;
+    }
+  }, delay);
+};
+
 export const useUser = create<{
   user: User | null;
   setUser: (user: User) => void;
@@ -36,7 +53,10 @@ export const workFlow = create<{
   nodes: Node[];
   setNodes: (change: any) => void;
   edges: Edge[];
-  setEdges: (edge: Edge) => void;
+  setEdges: (edge: Edge | { type: "clear" }) => void;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+  debouncedUpdate: (callback: () => void) => void;
 }>((set) => ({
   nodes: [],
   setNodes: (change: any) =>
@@ -50,13 +70,27 @@ export const workFlow = create<{
           ),
         };
       }
+      if (change.type === "remove") {
+        return {
+          nodes: state.nodes.filter((node) => node.id !== change.id),
+        };
+      }
       if (change.type === "add") {
         return { nodes: [...state.nodes, change.node] };
       }
       return state;
     }),
   edges: [],
-  setEdges: (edge: Edge) => set((state) => ({ edges: [...state.edges, edge] })),
+  setEdges: (edge: Edge | { type: "clear" }) =>
+    set((state) => {
+      if (edge.type === "clear") {
+        return { edges: [] };
+      }
+      return { edges: [...state.edges, edge as Edge] };
+    }),
+  loading: false,
+  setLoading: (loading: boolean) => set({ loading }),
+  debouncedUpdate: (callback: () => void) => debounceUpdate(callback),
 }));
 
 export const workFlowExecutionStatus = create<{

@@ -36,6 +36,10 @@ model Project {
   name        String
   description String?
 
+  nodes Json[]
+  edges Json[]
+  data  Json[]
+
   userId String
   user   User   @relation(fields: [userId], references: [id])
 

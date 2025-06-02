@@ -6,11 +6,15 @@ import {
   ReactNode,
   cloneElement,
   isValidElement,
+  useReducer,
+  useEffect,
+  useRef,
+  useMemo,
 } from "react";
 import { Handle, NodeProps, Position, Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { Trash, Plus, CloudLightning } from "lucide-react";
+import { Trash, Plus, CloudLightning, Play } from "lucide-react";
 import { workFlow } from "@/store";
 
 // Types for our data flow system
@@ -232,20 +236,30 @@ export const FlowNumberInput = withFlow(NumberInput, {
   position: Position.Left,
 });
 
-export function Wrapper({ children }: { children: ReactNode }) {
+export function Wrapper({ children, id }: { children: ReactNode; id: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
-
+  const { nodes, setNodes } = workFlow();
   const actions = [
     {
       label: "Remove",
       icon: <Trash size={12} />,
-      onClick: () => setIsOpen(false),
+      onClick: () => {
+        setNodes({
+          type: "remove",
+          id: id,
+        });
+      },
     },
     {
       label: "Add",
       icon: <Plus size={12} />,
+      onClick: () => setIsOpen(false),
+    },
+    {
+      label: "Execute",
+      icon: <Play size={12} />,
       onClick: () => setIsOpen(false),
     },
   ];
@@ -292,15 +306,20 @@ export function Wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-export function WrapperWithTrigger({ children }: { children: ReactNode }) {
+export function WrapperWithTrigger({
+  children,
+  onTrigger,
+  id,
+}: {
+  children: ReactNode;
+  onTrigger: () => void;
+  id: string;
+}) {
   const { nodes, edges } = workFlow();
   const [isTriggered, setIsTriggered] = useState(false);
 
   const handleTrigger = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsTriggered(true);
-    // You can add any trigger logic here
-    setTimeout(() => setIsTriggered(false), 1000); // Reset after 1 second
+    onTrigger();
   }, []);
 
   // Clone children with additional props
@@ -313,7 +332,7 @@ export function WrapperWithTrigger({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-row">
-      <Wrapper>
+      <Wrapper id={id}>
         <div className="flex flex-row items-center -z-1 justify-between absolute -ml-10 hover:-ml-22 transition-all duration-200 mt-8">
           <button
             onClick={handleTrigger}
@@ -338,14 +357,43 @@ export function WrapperWithTrigger({ children }: { children: ReactNode }) {
 }
 
 // Example SendToken component using the flow-aware inputs
-export function SendToken({ data }: NodeProps<Node>) {
+export function SendToken({}: NodeProps<Node>) {
+  const [data, setData] = useState({
+    amount: 0,
+    tokenAddress: "",
+    recipient: "",
+    network: "Sol",
+  });
+
+  const dataRef = useRef(data);
+
+  useEffect(() => {
+    console.log(data);
+    dataRef.current = data;
+  }, [data]);
+  const id = useMemo(() => {
+    return crypto.randomUUID();
+  }, []);
   return (
-    <WrapperWithTrigger>
-      <div className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200">
+    <WrapperWithTrigger
+      onTrigger={() => {
+        console.log(dataRef.current);
+      }}
+      id={id}
+    >
+      <div
+        id={id}
+        className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200"
+      >
         <div className="flex flex-row items-center justify-between">
           <h3 className="text-lg font-medium mb-4">Send Token</h3>
           <div className="bg-zinc-100 rounded-lg px-2">
-            <select className="">
+            <select
+              className=""
+              onChange={(e) => {
+                setData({ ...data, network: e.target.value });
+              }}
+            >
               <option value="Sol">Sol</option>
               <option value="Eth">Eth</option>
             </select>
@@ -354,19 +402,39 @@ export function SendToken({ data }: NodeProps<Node>) {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Amount</label>
-            <FlowNumberInput min={0} step={0.01} />
+            <FlowNumberInput
+              min={0}
+              step={0.01}
+              value={data.amount}
+              onChange={(value) => {
+                console.log(value);
+                setData({ ...data, amount: Number(value) });
+              }}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">
               Token Address
             </label>
-            <FlowTextInput placeholder="0x..." />
+            <FlowTextInput
+              placeholder="0x..."
+              value={data.tokenAddress}
+              onChange={(value) => {
+                setData({ ...data, tokenAddress: value as string });
+              }}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Recipient</label>
-            <FlowTextInput placeholder="0x..." />
+            <FlowTextInput
+              placeholder="0x..."
+              value={data.recipient}
+              onChange={(value) => {
+                setData({ ...data, recipient: value as string });
+              }}
+            />
           </div>
         </div>
       </div>
