@@ -8,7 +8,7 @@ import { authClient } from "./lib/auth";
 import SignIn from "./app/components/auth-comp";
 import { User } from "./generated/prisma";
 import { useUser } from "./server-store";
-
+import ListProjects from "./app/projects/page";
 const LandingPage = dynamic(() => import("@/app/page"), { ssr: false });
 
 export default function AllRoutes() {
@@ -25,6 +25,10 @@ export default function AllRoutes() {
     {
       path: "/projects/:projectId",
       element: <ProjectRoute />,
+    },
+    {
+      path: "/projects",
+      element: <ListProjects />,
     },
   ];
 

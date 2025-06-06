@@ -1,15 +1,18 @@
 import { prisma } from "@/lib/db";
 import { User } from "@/generated/prisma";
 import { tryCatch, validateRequired } from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
+import { auth, ServerAuth } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
 // GET /api/users/:id - Get a specific user
 export const GET = tryCatch(async (request: Request) => {
-  const authUser = (await auth.api.getSession({
-    headers: request.headers,
-  }))!.user;
+  const authUser = await ServerAuth(request);
+  if (authUser instanceof NextResponse) {
+    return authUser;
+  }
+
   if (!authUser) {
-    throw new Error("User not found");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({

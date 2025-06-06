@@ -1,14 +1,20 @@
 import { create } from "zustand";
 import { Project, User } from "./generated/prisma";
-import { Workflow } from "./types";
+import {
+  NodeData,
+  EdgeData,
+  CustomNode,
+  CustomEdge,
+  WorkflowData,
+} from "./types";
 import path from "path";
-import { Edge, Node } from "@xyflow/react";
+import { Edge, Node, Connection } from "@xyflow/react";
 
 // Debounce helper
 let updateTimeout: NodeJS.Timeout;
 let pendingUpdate: (() => void) | null = null;
 
-const debounceUpdate = (callback: () => void, delay: number = 10000) => {
+const debounceUpdate = (callback: () => void, delay: number = 2000) => {
   if (updateTimeout) {
     clearTimeout(updateTimeout);
   }
@@ -19,6 +25,21 @@ const debounceUpdate = (callback: () => void, delay: number = 10000) => {
       pendingUpdate = null;
     }
   }, delay);
+};
+
+// Add edge type mapping
+const NODE_EDGE_TYPES = {
+  sendtoken: "sendtoken-edge",
+  inputtext: "inputtext-edge",
+  inputnumber: "inputnumber-edge",
+  custom: "custom-edge",
+} as const;
+
+// Add utility function for generating unique IDs
+const generateUniqueId = (prefix: string = "node"): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `${prefix}-${timestamp}-${random}`;
 };
 
 export const useUser = create<{
@@ -49,48 +70,160 @@ export const loading = create<{
   setLoading: (loading: boolean) => set({ loading }),
 }));
 
+export const useEnv = create<{
+  isEnvModalOpen: boolean;
+  setIsEnvModalOpen: (isEnvModalOpen: boolean) => void;
+}>((set) => ({
+  isEnvModalOpen: false,
+  setIsEnvModalOpen: (isEnvModalOpen: boolean) => set({ isEnvModalOpen }),
+}));
+
 export const workFlow = create<{
-  nodes: Node[];
+  nodes: CustomNode[];
   setNodes: (change: any) => void;
-  edges: Edge[];
-  setEdges: (edge: Edge | { type: "clear" }) => void;
+  edges: CustomEdge[];
+  setEdges: (
+    edge:
+      | CustomEdge
+      | { type: "clear" }
+      | Connection
+      | { type: "remove"; id: string }
+  ) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
   debouncedUpdate: (callback: () => void) => void;
-}>((set) => ({
+  workflowData: WorkflowData | null;
+  setWorkflowData: (data: WorkflowData) => void;
+}>((set, get) => ({
   nodes: [],
   setNodes: (change: any) =>
     set((state) => {
+      const nodes = [...state.nodes];
+
       if (change.type === "position") {
-        return {
-          nodes: state.nodes.map((node) =>
-            node.id === change.id
-              ? { ...node, position: change.position }
-              : node
-          ),
-        };
+        const nodeIndex = nodes.findIndex((n) => n.id === change.id);
+        if (nodeIndex !== -1) {
+          nodes[nodeIndex] = {
+            ...nodes[nodeIndex],
+            position: change.position,
+            data: {
+              ...nodes[nodeIndex].data,
+              metadata: {
+                ...nodes[nodeIndex].data.metadata,
+                updatedAt: new Date(),
+              },
+            },
+          };
+        }
+        return { nodes };
       }
+
       if (change.type === "remove") {
-        return {
-          nodes: state.nodes.filter((node) => node.id !== change.id),
-        };
+        if (change.id === "all") {
+          return { nodes: [] };
+        }
+        return { nodes: nodes.filter((n) => n.id !== change.id) };
       }
+
       if (change.type === "add") {
-        return { nodes: [...state.nodes, change.node] };
+        const nodeIndex = nodes.findIndex((n) => n.id === change.node.id);
+        const now = new Date();
+
+        const newNode: CustomNode = {
+          ...change.node,
+          data: {
+            ...change.node.data,
+            metadata: {
+              createdAt: now,
+              updatedAt: now,
+              ...change.node.data?.metadata,
+            },
+            onDelete: () => {
+              get().setNodes({ type: "remove", id: change.node.id });
+            },
+          },
+        };
+
+        if (nodeIndex !== -1) {
+          nodes[nodeIndex] = newNode;
+        } else {
+          nodes.push(newNode);
+        }
+        return { nodes };
       }
+
       return state;
     }),
   edges: [],
-  setEdges: (edge: Edge | { type: "clear" }) =>
+  setEdges: (
+    edge:
+      | CustomEdge
+      | { type: "clear" }
+      | Connection
+      | { type: "remove"; id: string }
+  ) =>
     set((state) => {
-      if (edge.type === "clear") {
-        return { edges: [] };
+      const edges = [...state.edges];
+
+      if ("type" in edge) {
+        if (edge.type === "clear") {
+          return { edges: [] };
+        }
+        if (edge.type === "remove") {
+          return { edges: edges.filter((e) => e.id !== edge.id) };
+        }
       }
-      return { edges: [...state.edges, edge as Edge] };
+
+      if ("source" in edge && "target" in edge) {
+        const connection = edge as Connection;
+        const sourceNode = state.nodes.find((n) => n.id === connection.source);
+        const targetNode = state.nodes.find((n) => n.id === connection.target);
+
+        if (!sourceNode || !targetNode) {
+          console.error("Source or target node not found");
+          return { edges };
+        }
+
+        const edgeType =
+          NODE_EDGE_TYPES[sourceNode.type as keyof typeof NODE_EDGE_TYPES] ||
+          "custom-edge";
+        const newEdge: CustomEdge = {
+          id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle,
+          targetHandle: connection.targetHandle,
+          type: "custom-edge",
+          data: {
+            type: "custom-edge",
+            sourceType: sourceNode.type,
+            targetType: targetNode.type,
+            metadata: {
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          },
+        };
+
+        const existingEdgeIndex = edges.findIndex(
+          (e) =>
+            e.source === connection.source && e.target === connection.target
+        );
+
+        if (existingEdgeIndex === -1) {
+          edges.push(newEdge);
+        } else {
+          edges[existingEdgeIndex] = newEdge;
+        }
+      }
+
+      return { edges };
     }),
   loading: false,
   setLoading: (loading: boolean) => set({ loading }),
   debouncedUpdate: (callback: () => void) => debounceUpdate(callback),
+  workflowData: null,
+  setWorkflowData: (data: WorkflowData) => set({ workflowData: data }),
 }));
 
 export const workFlowExecutionStatus = create<{

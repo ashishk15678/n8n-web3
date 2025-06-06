@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -116,5 +114,88 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+@layer base {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500;
+  }
+
+  .nav-link {
+    @apply text-gray-300 hover:text-white transition-colors relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-gradient-to-r after:from-teal-500 after:to-cyan-500 hover:after:w-full after:transition-all;
+  }
+
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 text-white shadow-lg hover:shadow-teal-500/30;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-800/50 backdrop-blur-sm text-white border border-gray-700/50 hover:bg-gray-700/50 hover:border-teal-500/30;
+  }
+
+  .card {
+    @apply bg-gray-800/30 backdrop-blur-lg p-8 shadow-xl border border-gray-700/30 
+           hover:border-teal-500/20 transition-all duration-300 relative overflow-hidden;
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 85% 100%, 0 100%);
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(45, 212, 191, 0.1) 0%,
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .card:hover::before {
+    opacity: 1;
+  }
+
+  .section {
+    @apply py-16 md:py-24;
+  }
+
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+
+  .testimonials-container {
+    @apply relative overflow-hidden;
+    height: 400px;
+  }
+
+  .testimonials-track {
+    @apply flex gap-6 absolute;
+    animation: scroll 40s linear infinite;
+    transform: translateX(0) rotate(-5deg);
+  }
+
+  .testimonial-card {
+    @apply bg-gray-800/30 backdrop-blur-lg p-6 rounded-lg border border-gray-700/30 
+           hover:border-teal-500/20 transition-all duration-300 flex-none;
+    width: 400px;
+  }
+
+  .pause-animation {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0) rotate(-5deg);
+  }
+  100% {
+    transform: translateX(-50%) rotate(-5deg);
   }
 }

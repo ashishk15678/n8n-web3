@@ -11,11 +11,21 @@ import {
   useRef,
   useMemo,
 } from "react";
-import { Handle, NodeProps, Position, Node } from "@xyflow/react";
+import {
+  Handle,
+  NodeProps,
+  Position,
+  Node,
+  EdgeProps,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { Trash, Plus, CloudLightning, Play } from "lucide-react";
+import { Trash, Plus, CloudLightning, Play, X } from "lucide-react";
 import { workFlow } from "@/store";
+import { NodeData } from "@/types";
 
 // Types for our data flow system
 type FlowValue = string | number;
@@ -236,21 +246,38 @@ export const FlowNumberInput = withFlow(NumberInput, {
   position: Position.Left,
 });
 
-export function Wrapper({ children, id }: { children: ReactNode; id: string }) {
+export function Wrapper({
+  children,
+  id,
+  onDelete,
+  showDelete = true,
+  showActions = true,
+}: {
+  children: ReactNode;
+  id: string;
+  onDelete?: () => void;
+  showDelete?: boolean;
+  showActions?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
-  const { nodes, setNodes } = workFlow();
+  const { setNodes } = workFlow();
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete();
+    } else {
+      setNodes({ type: "remove", id });
+    }
+  };
+
   const actions = [
     {
       label: "Remove",
       icon: <Trash size={12} />,
-      onClick: () => {
-        setNodes({
-          type: "remove",
-          id: id,
-        });
-      },
+      onClick: handleDelete,
     },
     {
       label: "Add",
@@ -267,22 +294,35 @@ export function Wrapper({ children, id }: { children: ReactNode; id: string }) {
   return (
     <div
       onClick={() => setIsOpen(false)}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-4 relative group"
       onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsOpen(!isOpen);
-        setX(e.clientX);
-        setY(e.clientY);
+        if (showActions) {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+          setX(e.clientX);
+          setY(e.clientY);
+        }
       }}
     >
+      {showDelete && (
+        <button
+          onClick={handleDelete}
+          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 
+            hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100
+            focus:opacity-100 focus:outline-none z-50"
+          title="Delete node"
+        >
+          <Trash size={14} />
+        </button>
+      )}
       {children}
-      {isOpen && (
+      {isOpen && showActions && (
         <div
           onClick={() => setIsOpen(false)}
           style={{
-            top: y - 300,
-            left: x - 600,
+            top: y,
+            left: x,
           }}
           className="absolute w-full h-full"
         >
@@ -356,88 +396,345 @@ export function WrapperWithTrigger({
   );
 }
 
-// Example SendToken component using the flow-aware inputs
-export function SendToken({}: NodeProps<Node>) {
-  const [data, setData] = useState({
+// Add a helper hook for node updates
+function useNodeUpdate(nodeId: string, initialData: any) {
+  const { nodes, setNodes, debouncedUpdate } = workFlow();
+  const [nodeData, setNodeData] = useState(initialData);
+
+  const updateNodeData = useCallback(
+    (newData: any) => {
+      setNodeData(newData);
+      setNodes({
+        type: "add",
+        node: {
+          id: nodeId,
+          type: nodes.find((n) => n.id === nodeId)?.type || "default",
+          position: nodes.find((n) => n.id === nodeId)?.position || {
+            x: 0,
+            y: 0,
+          },
+          data: {
+            ...nodes.find((n) => n.id === nodeId)?.data,
+            ...newData,
+          },
+        },
+      });
+      debouncedUpdate(() => {
+        console.log("Node updated:", { id: nodeId, data: newData });
+      });
+    },
+    [nodeId, nodes, setNodes, debouncedUpdate]
+  );
+
+  return [nodeData, updateNodeData] as const;
+}
+
+// Update SendToken to use the update hook
+export function SendToken(props: NodeProps) {
+  const { id, data, selected } = props;
+  const initialData = {
     amount: 0,
     tokenAddress: "",
     recipient: "",
     network: "Sol",
+    ...(data as any),
+  };
+  const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
+
+  return (
+    <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
+      <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
+        {id}
+      </div>
+
+      <Wrapper id={id as string}>
+        <WrapperWithTrigger
+          onTrigger={() => {
+            console.log({ nodeData, id });
+          }}
+          id={id as string}
+        >
+          <div
+            id={id as string}
+            className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200"
+          >
+            <div className="flex flex-row items-center justify-between">
+              <h3 className="text-lg font-medium mb-4">Send Token</h3>
+              <div className="bg-zinc-100 rounded-lg px-2">
+                <select
+                  value={nodeData.network}
+                  onChange={(e) => {
+                    updateNodeData({ ...nodeData, network: e.target.value });
+                  }}
+                >
+                  <option value="Sol">Sol</option>
+                  <option value="Eth">Eth</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Amount</label>
+                <FlowNumberInput
+                  min={0}
+                  step={0.01}
+                  value={nodeData.amount}
+                  onChange={(value) => {
+                    updateNodeData({ ...nodeData, amount: Number(value) });
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Token Address
+                </label>
+                <FlowTextInput
+                  placeholder="0x..."
+                  value={nodeData.tokenAddress}
+                  onChange={(value) => {
+                    updateNodeData({
+                      ...nodeData,
+                      tokenAddress: value as string,
+                    });
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Recipient
+                </label>
+                <FlowTextInput
+                  placeholder="0x..."
+                  value={nodeData.recipient}
+                  onChange={(value) => {
+                    updateNodeData({ ...nodeData, recipient: value as string });
+                  }}
+                />
+                <Handle
+                  id="block-hash"
+                  title="Block hash"
+                  type="source"
+                  position={Position.Right}
+                />
+              </div>
+            </div>
+          </div>
+        </WrapperWithTrigger>
+      </Wrapper>
+    </div>
+  );
+}
+
+// Update InputText to use the update hook
+export const InputText = (props: NodeProps) => {
+  const { id, data, selected } = props;
+  const initialData = {
+    value: (data as NodeData).value || "",
+    ...(data as any),
+  };
+  const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
+
+  return (
+    <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
+      <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
+        {id}
+      </div>
+
+      <Wrapper id={id as string}>
+        <div className="p-4 rounded-lg shadow-lg bg-white">
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-blue-500"
+          />
+          <input
+            type="text"
+            value={nodeData.value}
+            onChange={(e) => {
+              updateNodeData({ ...nodeData, value: e.target.value });
+            }}
+            className="w-full p-2 border rounded"
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="w-3 h-3 bg-green-500"
+          />
+        </div>
+      </Wrapper>
+    </div>
+  );
+};
+
+// Update InputNumber to use the update hook
+export const InputNumber = (props: NodeProps) => {
+  const { id, data, selected } = props;
+  const initialData = {
+    value: (data as NodeData).value || 0,
+    ...(data as any),
+  };
+  const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
+
+  return (
+    <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
+      <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
+        {id}
+      </div>
+
+      <Wrapper id={id as string}>
+        <div className="p-4 rounded-lg shadow-lg bg-white">
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-blue-500"
+          />
+          <input
+            type="number"
+            value={nodeData.value}
+            onChange={(e) => {
+              updateNodeData({ ...nodeData, value: Number(e.target.value) });
+            }}
+            className="w-full p-2 border rounded"
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="w-3 h-3 bg-green-500"
+          />
+        </div>
+      </Wrapper>
+    </div>
+  );
+};
+
+// Define the data type for custom nodes
+type CustomNodeData = {
+  label: string;
+  type: string;
+  value?: string | number;
+  code?: string;
+  metadata: {
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy?: string;
+    tags?: string[];
+    description?: string;
+  };
+};
+
+// Update CustomNode component with proper typing
+export function CustomNode(props: NodeProps) {
+  const { id, data, selected } = props;
+  const nodeData = data as CustomNodeData;
+  const shortId = typeof id === "string" ? id.split("-").slice(-1)[0] : "";
+
+  return (
+    <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
+      <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
+        {shortId}
+      </div>
+
+      <Wrapper id={id as string}>
+        <div className="p-4 rounded-lg shadow-lg bg-white">
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="w-3 h-3 bg-blue-500"
+          />
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">
+              {nodeData.label || "Custom Node"}
+            </h3>
+            <p className="text-sm text-gray-600">
+              Type: {nodeData.type || "custom"}
+            </p>
+            {nodeData.value && (
+              <p className="mt-2 text-sm font-mono bg-gray-100 p-1 rounded">
+                {String(nodeData.value)}
+              </p>
+            )}
+          </div>
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="w-3 h-3 bg-green-500"
+          />
+        </div>
+      </Wrapper>
+    </div>
+  );
+}
+
+// Custom edge component with disconnect button
+export function CustomEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+}: EdgeProps) {
+  const { setEdges } = workFlow();
+  const [isHovered, setIsHovered] = useState(false);
+
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
   });
 
-  const dataRef = useRef(data);
+  const onEdgeClick = useCallback(
+    (evt: React.MouseEvent) => {
+      evt.stopPropagation();
+      setEdges({ type: "remove", id });
+    },
+    [id, setEdges]
+  );
 
-  useEffect(() => {
-    console.log(data);
-    dataRef.current = data;
-  }, [data]);
-  const id = useMemo(() => {
-    return crypto.randomUUID();
-  }, []);
   return (
-    <WrapperWithTrigger
-      onTrigger={() => {
-        console.log(dataRef.current);
-      }}
-      id={id}
-    >
-      <div
-        id={id}
-        className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200"
-      >
-        <div className="flex flex-row items-center justify-between">
-          <h3 className="text-lg font-medium mb-4">Send Token</h3>
-          <div className="bg-zinc-100 rounded-lg px-2">
-            <select
-              className=""
-              onChange={(e) => {
-                setData({ ...data, network: e.target.value });
-              }}
+    <>
+      <BaseEdge
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={{
+          ...style,
+          strokeWidth: isHovered ? 2 : 1,
+          transition: "all 0.2s ease",
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: "absolute",
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: "all",
+            cursor: "pointer",
+          }}
+          className="nodrag nopan"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {isHovered && (
+            <button
+              onClick={onEdgeClick}
+              className="bg-red-100 hover:bg-red-200 text-red-600 p-1 rounded-full transition-colors duration-200 shadow-sm"
+              style={{ transform: "translate(-50%, -50%)" }}
             >
-              <option value="Sol">Sol</option>
-              <option value="Eth">Eth</option>
-            </select>
-          </div>
+              <Trash size={12} />
+            </button>
+          )}
         </div>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Amount</label>
-            <FlowNumberInput
-              min={0}
-              step={0.01}
-              value={data.amount}
-              onChange={(value) => {
-                console.log(value);
-                setData({ ...data, amount: Number(value) });
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Token Address
-            </label>
-            <FlowTextInput
-              placeholder="0x..."
-              value={data.tokenAddress}
-              onChange={(value) => {
-                setData({ ...data, tokenAddress: value as string });
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Recipient</label>
-            <FlowTextInput
-              placeholder="0x..."
-              value={data.recipient}
-              onChange={(value) => {
-                setData({ ...data, recipient: value as string });
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </WrapperWithTrigger>
+      </EdgeLabelRenderer>
+    </>
   );
 }

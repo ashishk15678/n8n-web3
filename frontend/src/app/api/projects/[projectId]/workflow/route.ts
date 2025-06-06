@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Edge, Node } from "@xyflow/react";
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
-    const { projectId } = params;
-    const { nodes, edges } = (await request.json()) as {
+    const { projectId, nodes, edges } = (await request.json()) as {
+      projectId: string;
       nodes: Node[];
       edges: Edge[];
     };
+
+    // Validate projectId matches
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "Project ID is required" },
+        { status: 400 }
+      );
+    }
 
     if (!nodes || !edges) {
       return NextResponse.json(

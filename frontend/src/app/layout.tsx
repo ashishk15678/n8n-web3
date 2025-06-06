@@ -6,7 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { WalletProviders } from "@/providers/WalletProvider";
 import dynamic from "next/dynamic";
-
+import EnvModal from "./components/env";
+import { Toaster } from "sonner";
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,6 +34,8 @@ export default function RootLayout({
           <WalletButton />
           <QueryClientProvider client={queryClient}>
             <AllRoutes />
+            <EnvModal />
+            <Toaster />
           </QueryClientProvider>
         </WalletProviders>
       </body>

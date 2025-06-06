@@ -27,8 +27,22 @@ model User {
   image         String?
   sessions      Session[]
   accounts      Account[]
+  envs          Env[]
 
   @@map("users")
+}
+
+model Env {
+  id          String   @id @default(uuid())
+  name        String
+  value       String
+  generatedId String
+  secret      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  User        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+
+  @@map("envs")
 }
 
 model Project {

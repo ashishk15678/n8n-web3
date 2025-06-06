@@ -50,7 +50,7 @@ export const POST = tryCatch(async (request: Request) => {
   const newProject = await prisma.project.create({
     data: {
       ...project,
-      user: { connect: { id: userId } },
+      userId,
     },
     include: {
       user: true,

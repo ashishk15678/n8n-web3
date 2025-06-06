@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Zap,
@@ -21,8 +21,9 @@ import {
   Hexagon,
   Box,
   Layers,
-} from "lucide-react"
-import Link from "next/link"
+} from "lucide-react";
+import Link from "next/link";
+import Testimonials from "@/components/ui/testimonials";
 
 // Blockchain visualization component
 const BlockchainVisualization = () => {
@@ -48,7 +49,9 @@ const BlockchainVisualization = () => {
               <div className="absolute inset-1 flex items-center justify-center">
                 <Hexagon className="w-8 h-8 text-teal-400/70" />
               </div>
-              <div className="absolute bottom-2 right-2 text-xs text-teal-400/70 font-mono">#{i + 1}</div>
+              <div className="absolute bottom-2 right-2 text-xs text-teal-400/70 font-mono">
+                #{i + 1}
+              </div>
             </div>
 
             {/* Connection lines */}
@@ -63,8 +66,8 @@ const BlockchainVisualization = () => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
 // Floating 3D elements
 const FloatingElements = () => {
@@ -95,8 +98,8 @@ const FloatingElements = () => {
         </div>
       ))}
     </div>
-  )
-}
+  );
+};
 
 export default function LandingPage() {
   return (
@@ -174,8 +177,9 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-2xl md:text-3xl text-gray-100 mb-16 max-w-4xl mx-auto leading-relaxed font-light">
-              The most powerful Web3 automation platform. Create complex workflows, schedule transactions, and
-              orchestrate your entire DeFi strategy.{" "}
+              The most powerful Web3 automation platform. Create complex
+              workflows, schedule transactions, and orchestrate your entire DeFi
+              strategy.{" "}
               <span className="text-teal-300 font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
                 We can do it all, and nobody can stop us.
               </span>
@@ -206,7 +210,10 @@ export default function LandingPage() {
                 { number: "50+", label: "Integrations" },
                 { number: "99.9%", label: "Uptime" },
               ].map((stat, index) => (
-                <div key={index} className="group cursor-pointer hover:scale-110 transition-all duration-300">
+                <div
+                  key={index}
+                  className="group cursor-pointer hover:scale-110 transition-all duration-300"
+                >
                   <div className="text-4xl md:text-5xl font-black text-white mb-3 group-hover:bg-gradient-to-r group-hover:from-teal-400 group-hover:to-emerald-400 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300">
                     {stat.number}
                   </div>
@@ -228,7 +235,8 @@ export default function LandingPage() {
               Everything You Need
             </h2>
             <p className="text-2xl text-gray-200 max-w-3xl mx-auto font-light">
-              From simple swaps to complex DeFi strategies, we've got the tools to make it happen.
+              From simple swaps to complex DeFi strategies, we've got the tools
+              to make it happen.
             </p>
           </div>
 
@@ -242,7 +250,11 @@ export default function LandingPage() {
                 gradient: "from-teal-500 to-emerald-600",
                 bgGradient: "from-teal-900/30 to-emerald-800/20",
                 borderColor: "border-teal-400/30",
-                features: ["Intuitive drag & drop interface", "Pre-built templates", "Real-time testing"],
+                features: [
+                  "Intuitive drag & drop interface",
+                  "Pre-built templates",
+                  "Real-time testing",
+                ],
               },
               {
                 icon: Clock,
@@ -252,7 +264,11 @@ export default function LandingPage() {
                 gradient: "from-amber-500 to-amber-600",
                 bgGradient: "from-amber-900/30 to-amber-800/20",
                 borderColor: "border-amber-400/30",
-                features: ["Cron-based scheduling", "Price-based triggers", "Event-driven automation"],
+                features: [
+                  "Cron-based scheduling",
+                  "Price-based triggers",
+                  "Event-driven automation",
+                ],
               },
               {
                 icon: Shield,
@@ -262,34 +278,53 @@ export default function LandingPage() {
                 gradient: "from-emerald-500 to-emerald-600",
                 bgGradient: "from-emerald-900/30 to-emerald-800/20",
                 borderColor: "border-emerald-400/30",
-                features: ["Multi-signature wallets", "Hardware wallet support", "Complete audit logs"],
+                features: [
+                  "Multi-signature wallets",
+                  "Hardware wallet support",
+                  "Complete audit logs",
+                ],
               },
               {
                 icon: Code,
                 title: "Developer APIs",
-                description: "RESTful APIs, GraphQL endpoints, and WebSocket connections for real-time integration.",
+                description:
+                  "RESTful APIs, GraphQL endpoints, and WebSocket connections for real-time integration.",
                 gradient: "from-rose-500 to-rose-600",
                 bgGradient: "from-rose-900/30 to-rose-800/20",
                 borderColor: "border-rose-400/30",
-                features: ["RESTful & GraphQL APIs", "WebSocket real-time data", "SDK for popular languages"],
+                features: [
+                  "RESTful & GraphQL APIs",
+                  "WebSocket real-time data",
+                  "SDK for popular languages",
+                ],
               },
               {
                 icon: Rocket,
                 title: "Multi-Chain Support",
-                description: "Ethereum, Polygon, BSC, Arbitrum, and more. One platform for all your chains.",
+                description:
+                  "Ethereum, Polygon, BSC, Arbitrum, and more. One platform for all your chains.",
                 gradient: "from-amber-500 to-rose-600",
                 bgGradient: "from-amber-900/30 to-rose-800/20",
                 borderColor: "border-amber-400/30",
-                features: ["15+ supported chains", "Cross-chain bridges", "Unified portfolio view"],
+                features: [
+                  "15+ supported chains",
+                  "Cross-chain bridges",
+                  "Unified portfolio view",
+                ],
               },
               {
                 icon: Zap,
                 title: "Lightning Fast",
-                description: "Sub-second execution times with our optimized infrastructure and MEV protection.",
+                description:
+                  "Sub-second execution times with our optimized infrastructure and MEV protection.",
                 gradient: "from-teal-500 to-emerald-600",
                 bgGradient: "from-teal-900/30 to-emerald-800/20",
                 borderColor: "border-teal-400/30",
-                features: ["<100ms execution time", "MEV protection built-in", "99.9% uptime guarantee"],
+                features: [
+                  "<100ms execution time",
+                  "MEV protection built-in",
+                  "99.9% uptime guarantee",
+                ],
               },
             ].map((feature, index) => (
               <Card
@@ -369,8 +404,9 @@ export default function LandingPage() {
                   Built on Modern Blockchain Technology
                 </h2>
                 <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-                  Our platform leverages the latest advancements in blockchain technology to provide secure,
-                  transparent, and efficient automation for your Web3 workflows.
+                  Our platform leverages the latest advancements in blockchain
+                  technology to provide secure, transparent, and efficient
+                  automation for your Web3 workflows.
                 </p>
                 <ul className="space-y-4 mb-8">
                   {[
@@ -417,7 +453,10 @@ export default function LandingPage() {
                     ))}
 
                     {/* Connection lines */}
-                    <svg className="absolute inset-0 w-full h-full" style={{ zIndex: -1 }}>
+                    <svg
+                      className="absolute inset-0 w-full h-full"
+                      style={{ zIndex: -1 }}
+                    >
                       <path
                         d="M80,100 L160,150 L240,120 L320,170 L400,130"
                         stroke="url(#lineGradient)"
@@ -426,9 +465,23 @@ export default function LandingPage() {
                         strokeDasharray="5,5"
                         className="animate-pulse"
                       />
-                      <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.2" />
+                      <linearGradient
+                        id="lineGradient"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#2DD4BF"
+                          stopOpacity="0.8"
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#2DD4BF"
+                          stopOpacity="0.2"
+                        />
                       </linearGradient>
                     </svg>
                   </div>
@@ -439,93 +492,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="py-32 relative z-10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-black mb-8 bg-gradient-to-r from-white via-teal-200 to-white bg-clip-text text-transparent">
-              Trusted by Web3 Leaders
-            </h2>
-            <p className="text-2xl text-gray-200 font-light">
-              Join thousands of developers and protocols already building with FlowForge
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 mb-20">
-            {[
-              {
-                name: "Sarah Chen",
-                role: "CTO, DeFi Protocol",
-                quote:
-                  "FlowForge completely transformed how we handle our DeFi operations. The visual builder is incredibly intuitive.",
-                gradient: "from-teal-500 to-emerald-500",
-              },
-              {
-                name: "Marcus Rodriguez",
-                role: "Founder, Yield Labs",
-                quote: "The scheduling features are game-changing. We've automated our entire yield farming strategy.",
-                gradient: "from-amber-500 to-rose-500",
-              },
-              {
-                name: "Alex Thompson",
-                role: "Head of Ops, Trading DAO",
-                quote:
-                  "Security and reliability are top-notch. We trust FlowForge with millions in transactions daily.",
-                gradient: "from-emerald-500 to-teal-500",
-              },
-            ].map((testimonial, index) => (
-              <Card
-                key={index}
-                className="bg-gradient-to-br from-[#0A0E14]/80 to-[#0A0E14] border-2 border-teal-400/30 backdrop-blur-xl hover:border-teal-400/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl group cursor-pointer"
-                style={{
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                }}
-              >
-                <CardContent className="p-10">
-                  <div className="flex items-center mb-6">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className="w-6 h-6 text-amber-400 fill-current group-hover:scale-110 transition-transform duration-300"
-                        style={{ transitionDelay: `${i * 100}ms` }}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-gray-200 mb-8 text-lg leading-relaxed group-hover:text-white transition-colors duration-300 font-medium">
-                    "{testimonial.quote}"
-                  </p>
-                  <div className="flex items-center">
-                    <div
-                      className={`w-14 h-14 bg-gradient-to-r ${testimonial.gradient} rounded-full mr-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-teal-500/25`}
-                    ></div>
-                    <div>
-                      <div className="text-white font-bold text-lg group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-200 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300">
-                        {testimonial.name}
-                      </div>
-                      <div className="text-gray-300 group-hover:text-gray-200 transition-colors duration-300 font-medium">
-                        {testimonial.role}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 opacity-40 hover:opacity-60 transition-opacity duration-500">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-center hover:scale-110 transition-transform duration-300"
-              >
-                <div className="w-32 h-16 bg-gradient-to-r from-teal-900/50 to-emerald-900/50 rounded-lg border border-teal-400/30 flex items-center justify-center text-teal-400 font-bold shadow-lg shadow-teal-500/10">
-                  LOGO
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Testimonials />
 
       {/* CTA Section */}
       <section className="py-32 relative z-10 overflow-hidden">
@@ -563,7 +530,8 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-2xl text-gray-100 mb-16 max-w-3xl mx-auto leading-relaxed font-light">
-              Join the revolution. Start building unstoppable Web3 workflows today.
+              Join the revolution. Start building unstoppable Web3 workflows
+              today.
               <span className="text-teal-300 font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
                 {" "}
                 No limits. No compromises.
@@ -594,103 +562,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t-2 border-teal-400/20 bg-[#0A0E14]/80 backdrop-blur-2xl">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid md:grid-cols-4 gap-12 mb-12">
-            <div>
-              <div className="flex items-center space-x-3 mb-6 group cursor-pointer">
-                <div className="w-10 h-10 bg-gradient-to-r from-teal-400 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:shadow-teal-500/50 transition-all duration-300 group-hover:scale-110">
-                  <Layers className="w-6 h-6 text-[#0A0E14]" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-white via-teal-200 to-emerald-200 bg-clip-text text-transparent">
-                  FlowForge
-                </span>
-              </div>
-              <p className="text-gray-200 mb-6 text-lg leading-relaxed">
-                The most powerful Web3 automation platform. Build without limits.
-              </p>
-              <div className="flex space-x-4">
-                {[Twitter, Github, Discord].map((Icon, index) => (
-                  <Link
-                    key={index}
-                    href="#"
-                    className="text-gray-300 hover:text-white transition-all duration-300 hover:scale-125 p-2 rounded-lg hover:bg-teal-500/10"
-                  >
-                    <Icon className="w-6 h-6" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {[
-              {
-                title: "Product",
-                links: ["Features", "Pricing", "Templates", "Integrations"],
-              },
-              {
-                title: "Developers",
-                links: ["Documentation", "API Reference", "SDKs", "Community"],
-              },
-              {
-                title: "Company",
-                links: ["About", "Blog", "Careers", "Contact"],
-              },
-            ].map((section, index) => (
-              <div key={index}>
-                <h3 className="text-white font-bold mb-6 text-lg">{section.title}</h3>
-                <ul className="space-y-3">
-                  {section.links.map((link, i) => (
-                    <li key={i}>
-                      <Link
-                        href="#"
-                        className="text-gray-300 hover:text-white transition-all duration-300 hover:translate-x-1 inline-block font-medium"
-                      >
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t-2 border-teal-400/20 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-200 font-medium">© {new Date().getFullYear()} FlowForge. All rights reserved.</p>
-            <div className="flex space-x-8 mt-4 md:mt-0">
-              {["Privacy Policy", "Terms of Service", "Security"].map((link, index) => (
-                <Link
-                  key={index}
-                  href="#"
-                  className="text-gray-300 hover:text-white transition-all duration-300 hover:scale-105 font-medium"
-                >
-                  {link}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
-
       {/* Add custom styles for animations */}
       <style jsx global>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
         }
-        
+
         .animate-float {
           animation: float 5s ease-in-out infinite;
         }
-        
+
         .perspective {
           perspective: 1000px;
         }
-        
+
         .hover\:rotate-y-12:hover {
           transform: rotateY(12deg);
         }
       `}</style>
     </div>
-  )
+  );
 }
