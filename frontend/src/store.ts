@@ -1,20 +1,23 @@
 import { create } from "zustand";
 import { Project, User } from "./generated/prisma";
-import {
-  NodeData,
-  EdgeData,
-  CustomNode,
-  CustomEdge,
-  WorkflowData,
-} from "./types";
+import { NodeData, CustomNode, CustomEdge, WorkflowData } from "./types";
 import path from "path";
-import { Edge, Node, Connection } from "@xyflow/react";
+import { Connection } from "@xyflow/react";
 
-// Debounce helper
+// Update the debounce helper to handle immediate updates
 let updateTimeout: NodeJS.Timeout;
 let pendingUpdate: (() => void) | null = null;
 
-const debounceUpdate = (callback: () => void, delay: number = 2000) => {
+const debounceUpdate = (
+  callback: () => void,
+  delay: number = 2000,
+  immediate: boolean = false
+) => {
+  if (immediate) {
+    callback();
+    return;
+  }
+
   if (updateTimeout) {
     clearTimeout(updateTimeout);
   }
@@ -34,13 +37,6 @@ const NODE_EDGE_TYPES = {
   inputnumber: "inputnumber-edge",
   custom: "custom-edge",
 } as const;
-
-// Add utility function for generating unique IDs
-const generateUniqueId = (prefix: string = "node"): string => {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${prefix}-${timestamp}-${random}`;
-};
 
 export const useUser = create<{
   user: User | null;
@@ -78,6 +74,149 @@ export const useEnv = create<{
   setIsEnvModalOpen: (isEnvModalOpen: boolean) => set({ isEnvModalOpen }),
 }));
 
+// Update helper to initialize node data with config
+function initializeNodeData(data: Partial<NodeData> = {}): NodeData {
+  const baseData: NodeData = {
+    label: data.label || "Node",
+    type: data.type || "default",
+    value: data.value || null,
+    config: {
+      inputs: {
+        value: null,
+        updatedAt: new Date(),
+      },
+      outputs: {
+        value: null,
+        updatedAt: new Date(),
+      },
+    },
+    metadata: {
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  };
+
+  // Deep merge config and metadata
+  if (data.config) {
+    baseData.config = {
+      ...baseData.config,
+      ...data.config,
+      inputs: {
+        ...baseData.config.inputs,
+        ...data.config.inputs,
+      },
+      outputs: {
+        ...baseData.config.outputs,
+        ...data.config.outputs,
+      },
+    };
+  }
+
+  if (data.metadata) {
+    baseData.metadata = {
+      ...baseData.metadata,
+      ...data.metadata,
+    };
+  }
+
+  // Merge remaining properties
+  return {
+    ...baseData,
+    ...Object.fromEntries(
+      Object.entries(data).filter(
+        ([key]) => !["config", "metadata"].includes(key)
+      )
+    ),
+  };
+}
+
+// Update getNodeValue to use config
+function getNodeValue(node: CustomNode): any {
+  if (!node.data?.config) return null;
+
+  switch (node.type) {
+    case "sendtoken":
+      return (
+        node.data.config.inputs?.value ||
+        node.data.amount ||
+        node.data.tokenAddress ||
+        node.data.recipient
+      );
+    case "inputtext":
+    case "inputnumber":
+    case "custom":
+    default:
+      return node.data.config.inputs?.value;
+  }
+}
+
+// Update setNodeValue to handle config properly
+function setNodeValue(node: CustomNode, value: any): CustomNode {
+  const updatedNode = { ...node };
+  const now = new Date();
+
+  if (!updatedNode.data) {
+    updatedNode.data = initializeNodeData();
+  }
+
+  const baseConfig = {
+    inputs: { value: null, updatedAt: now },
+    outputs: { value: null, updatedAt: now },
+  };
+
+  if (!updatedNode.data.config) {
+    updatedNode.data.config = baseConfig;
+  }
+
+  switch (node.type) {
+    case "sendtoken":
+      if (typeof value === "number") {
+        updatedNode.data = {
+          ...node.data,
+          amount: value,
+          config: {
+            ...node.data.config,
+            inputs: {
+              ...node.data.config.inputs,
+              value,
+              updatedAt: now,
+            },
+          },
+        };
+      } else if (typeof value === "string" && value.startsWith("0x")) {
+        const field = node.data.tokenAddress ? "recipient" : "tokenAddress";
+        updatedNode.data = {
+          ...node.data,
+          [field]: value,
+          config: {
+            ...node.data.config,
+            inputs: {
+              ...node.data.config.inputs,
+              value,
+              updatedAt: now,
+            },
+          },
+        };
+      }
+      break;
+    default:
+      updatedNode.data = {
+        ...node.data,
+        value,
+        config: {
+          ...node.data.config,
+          inputs: {
+            ...node.data.config.inputs,
+            value,
+            updatedAt: now,
+          },
+        },
+      };
+  }
+
+  return updatedNode;
+}
+
 export const workFlow = create<{
   nodes: CustomNode[];
   setNodes: (change: any) => void;
@@ -91,7 +230,7 @@ export const workFlow = create<{
   ) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
-  debouncedUpdate: (callback: () => void) => void;
+  debouncedUpdate: (callback: () => void, immediate?: boolean) => void;
   workflowData: WorkflowData | null;
   setWorkflowData: (data: WorkflowData) => void;
 }>((set, get) => ({
@@ -99,6 +238,14 @@ export const workFlow = create<{
   setNodes: (change: any) =>
     set((state) => {
       const nodes = [...state.nodes];
+      const edges = [...state.edges];
+
+      // Handle immediate updates for clearing all nodes
+      if (change.type === "remove" && change.id === "all") {
+        // Clear edges immediately when clearing all nodes
+        get().setEdges({ type: "clear" });
+        return { nodes: [], edges: [] };
+      }
 
       if (change.type === "position") {
         const nodeIndex = nodes.findIndex((n) => n.id === change.id);
@@ -108,6 +255,13 @@ export const workFlow = create<{
             position: change.position,
             data: {
               ...nodes[nodeIndex].data,
+              config: {
+                ...nodes[nodeIndex].data.config,
+                inputs: {
+                  ...nodes[nodeIndex].data.config.inputs,
+                  updatedAt: new Date(),
+                },
+              },
               metadata: {
                 ...nodes[nodeIndex].data.metadata,
                 updatedAt: new Date(),
@@ -120,31 +274,63 @@ export const workFlow = create<{
 
       if (change.type === "remove") {
         if (change.id === "all") {
-          return { nodes: [] };
+          return { nodes: [], edges: [] };
         }
-        return { nodes: nodes.filter((n) => n.id !== change.id) };
+        // When removing a node, also remove connected edges and update connected nodes
+        const connectedEdges = edges.filter(
+          (e) => e.source === change.id || e.target === change.id
+        );
+
+        // Reset values of nodes that were connected to the removed node
+        connectedEdges.forEach((edge) => {
+          const connectedNodeId =
+            edge.source === change.id ? edge.target : edge.source;
+          const connectedNodeIndex = nodes.findIndex(
+            (n) => n.id === connectedNodeId
+          );
+          if (connectedNodeIndex !== -1) {
+            nodes[connectedNodeIndex] = setNodeValue(
+              nodes[connectedNodeIndex],
+              null
+            );
+          }
+        });
+
+        return {
+          nodes: nodes.filter((n) => n.id !== change.id),
+          edges: edges.filter(
+            (e) => e.source !== change.id && e.target !== change.id
+          ),
+        };
       }
 
       if (change.type === "add") {
         const nodeIndex = nodes.findIndex((n) => n.id === change.node.id);
-        const now = new Date();
-
         const newNode: CustomNode = {
           ...change.node,
-          data: {
-            ...change.node.data,
-            metadata: {
-              createdAt: now,
-              updatedAt: now,
-              ...change.node.data?.metadata,
-            },
-            onDelete: () => {
-              get().setNodes({ type: "remove", id: change.node.id });
-            },
-          },
+          data: initializeNodeData(change.node.data),
         };
 
         if (nodeIndex !== -1) {
+          const oldNode = nodes[nodeIndex];
+          const oldValue = getNodeValue(oldNode);
+          const newValue = getNodeValue(newNode);
+
+          if (oldValue !== newValue) {
+            const outgoingEdges = edges.filter((e) => e.source === newNode.id);
+            outgoingEdges.forEach((edge) => {
+              const targetNodeIndex = nodes.findIndex(
+                (n) => n.id === edge.target
+              );
+              if (targetNodeIndex !== -1) {
+                nodes[targetNodeIndex] = setNodeValue(
+                  nodes[targetNodeIndex],
+                  newValue
+                );
+              }
+            });
+          }
+
           nodes[nodeIndex] = newNode;
         } else {
           nodes.push(newNode);
@@ -164,46 +350,86 @@ export const workFlow = create<{
   ) =>
     set((state) => {
       const edges = [...state.edges];
+      const nodes = [...state.nodes];
+
+      // Handle immediate updates for clearing all edges
+      if ("type" in edge && edge.type === "clear") {
+        // Reset values of all nodes that were connected
+        nodes.forEach((node, index) => {
+          if (node.data?.config) {
+            nodes[index] = setNodeValue(node, null);
+          }
+        });
+        return { edges: [], nodes };
+      }
 
       if ("type" in edge) {
-        if (edge.type === "clear") {
-          return { edges: [] };
-        }
         if (edge.type === "remove") {
-          return { edges: edges.filter((e) => e.id !== edge.id) };
+          // When removing an edge, reset the target node's value
+          const edgeToRemove = edges.find((e) => e.id === edge.id);
+          if (edgeToRemove) {
+            const targetNodeIndex = nodes.findIndex(
+              (n) => n.id === edgeToRemove.target
+            );
+            if (targetNodeIndex !== -1) {
+              const targetNode = nodes[targetNodeIndex];
+              nodes[targetNodeIndex] = setNodeValue(targetNode, null);
+            }
+          }
+
+          return { edges: edges.filter((e) => e.id !== edge.id), nodes };
         }
       }
 
       if ("source" in edge && "target" in edge) {
         const connection = edge as Connection;
-        const sourceNode = state.nodes.find((n) => n.id === connection.source);
-        const targetNode = state.nodes.find((n) => n.id === connection.target);
+        const sourceNode = nodes.find((n) => n.id === connection.source);
+        const targetNode = nodes.find((n) => n.id === connection.target);
 
         if (!sourceNode || !targetNode) {
           console.error("Source or target node not found");
           return { edges };
         }
 
+        const sourceValue = getNodeValue(sourceNode);
+        const targetNodeIndex = nodes.findIndex(
+          (n) => n.id === connection.target
+        );
+
+        if (targetNodeIndex !== -1) {
+          nodes[targetNodeIndex] = setNodeValue(targetNode, sourceValue);
+        }
+
         const edgeType =
           NODE_EDGE_TYPES[sourceNode.type as keyof typeof NODE_EDGE_TYPES] ||
-          "custom-edge";
+          "default";
         const newEdge: CustomEdge = {
           id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
           source: connection.source,
           target: connection.target,
           sourceHandle: connection.sourceHandle,
           targetHandle: connection.targetHandle,
-          type: "custom-edge",
+          type: edgeType,
           data: {
-            type: "custom-edge",
+            type: edgeType,
             sourceType: sourceNode.type,
+            sourceValue: sourceValue,
             targetType: targetNode.type,
+            value: sourceValue,
+            config: {
+              inputs: { value: connection.source, updatedAt: new Date() },
+              outputs: {
+                value: connection.target,
+                updatedAt: new Date(),
+              },
+            },
             metadata: {
               createdAt: new Date(),
               updatedAt: new Date(),
             },
           },
         };
+        console.log({ newEdge }, { data: newEdge.data });
 
         const existingEdgeIndex = edges.findIndex(
           (e) =>
@@ -215,13 +441,16 @@ export const workFlow = create<{
         } else {
           edges[existingEdgeIndex] = newEdge;
         }
+
+        return { edges, nodes };
       }
 
       return { edges };
     }),
   loading: false,
   setLoading: (loading: boolean) => set({ loading }),
-  debouncedUpdate: (callback: () => void) => debounceUpdate(callback),
+  debouncedUpdate: (callback: () => void, immediate: boolean = false) =>
+    debounceUpdate(callback, 2000, immediate),
   workflowData: null,
   setWorkflowData: (data: WorkflowData) => set({ workflowData: data }),
 }));

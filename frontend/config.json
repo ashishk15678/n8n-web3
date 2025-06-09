@@ -1,0 +1,9 @@
+{
+  "Web3": {
+    "Solana": {
+      "provider": "https://api.devnet.solana.com",
+      "privateKey": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "rpcSubscription": "wss://api.devnet.solana.com"
+    }
+  }
+}

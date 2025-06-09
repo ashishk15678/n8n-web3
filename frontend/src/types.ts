@@ -5,6 +5,20 @@ import {
   Edge as FlowEdge,
 } from "@xyflow/react";
 
+export interface NodeConfig {
+  inputs: {
+    value: any;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  outputs: {
+    value: any;
+    updatedAt: Date;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 export interface NodeData extends Record<string, unknown> {
   label: string;
   type: string;
@@ -15,11 +29,7 @@ export interface NodeData extends Record<string, unknown> {
   lastRun?: Date;
   executionCount?: number;
   // Node configuration
-  config: {
-    inputs?: Record<string, any>;
-    outputs?: Record<string, any>;
-    settings?: Record<string, any>;
-  };
+  config: NodeConfig;
   // Node metadata
   metadata: {
     createdAt: Date;
@@ -27,6 +37,7 @@ export interface NodeData extends Record<string, unknown> {
     createdBy?: string;
     tags?: string[];
     description?: string;
+    [key: string]: any;
   };
   [key: string]: unknown;
 }

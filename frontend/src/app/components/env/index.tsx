@@ -201,6 +201,7 @@ export function Input({
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
+  props?: React.InputHTMLAttributes<HTMLInputElement>;
 }) {
   return (
     <input

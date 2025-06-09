@@ -23,9 +23,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { Trash, Plus, CloudLightning, Play, X } from "lucide-react";
+import { Trash, Plus, CloudLightning, Play, X, Copy } from "lucide-react";
 import { workFlow } from "@/store";
 import { NodeData } from "@/types";
+import { WrapperWithTrigger } from "./wrapper";
+import { Wrapper } from "./wrapper";
 
 // Types for our data flow system
 type FlowValue = string | number;
@@ -100,8 +102,6 @@ export function withFlow<T extends object>(
       value?: FlowValue;
       onChange?: (value: FlowValue) => void;
       isConnected?: boolean;
-      onConnect?: () => void;
-      onDisconnect?: () => void;
     }
   >,
   options: {
@@ -112,30 +112,24 @@ export function withFlow<T extends object>(
 ) {
   return function FlowComponent(props: T) {
     const { id, type, position } = options;
-    const { getValue, addConnection, removeConnection } = useFlow();
-    const [localValue, setLocalValue] = useState<FlowValue>("");
+    const { getValue } = useFlow();
     const [isConnected, setIsConnected] = useState(false);
-
-    const handleConnect = useCallback(() => {
-      setIsConnected(true);
-    }, []);
-
-    const handleDisconnect = useCallback(() => {
-      setIsConnected(false);
-      setLocalValue("");
-    }, []);
-
-    const handleChange = useCallback(
-      (value: FlowValue) => {
-        if (!isConnected) {
-          setLocalValue(value);
-        }
-      },
-      [isConnected]
+    const [localValue, setLocalValue] = useState<FlowValue | undefined>(
+      undefined
     );
 
+    // Get value from flow context
     const flowValue = getValue(id);
-    const displayValue = isConnected ? flowValue : localValue;
+
+    // Update local value when flow value changes
+    useEffect(() => {
+      if (flowValue !== undefined) {
+        setLocalValue(flowValue);
+        setIsConnected(true);
+      } else {
+        setIsConnected(false);
+      }
+    }, [flowValue]);
 
     return (
       <div className="relative">
@@ -143,33 +137,22 @@ export function withFlow<T extends object>(
           type={type === "input" ? "target" : "source"}
           position={position}
           id={id}
-          className="w-3 h-3 bg-blue-500 hover:bg-blue-600"
-          onConnect={handleConnect}
+          className={`w-3 h-3 ${
+            isConnected ? "bg-green-500" : "bg-blue-500 hover:bg-blue-600"
+          } transition-colors duration-200`}
+          onConnect={() => setIsConnected(true)}
         />
         <WrappedComponent
           {...props}
-          value={displayValue}
-          onChange={handleChange}
+          value={localValue}
           isConnected={isConnected}
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
+          onChange={(value) => {
+            if (!isConnected) {
+              setLocalValue(value);
+              (props as any).onChange?.(value);
+            }
+          }}
         />
-        {!isConnected && (
-          <button
-            onClick={handleConnect}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 p-2 rounded-full"
-          >
-            +
-          </button>
-        )}
-        {isConnected && (
-          <button
-            onClick={handleDisconnect}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 p-2 rounded-full"
-          >
-            -
-          </button>
-        )}
       </div>
     );
   };
@@ -177,58 +160,91 @@ export function withFlow<T extends object>(
 
 // Example input components that can be wrapped
 export function TextInput({
-  value,
+  value = "",
   onChange,
   isConnected,
   placeholder = "Enter text...",
 }: {
-  value?: FlowValue;
-  onChange?: (value: FlowValue) => void;
+  value?: string;
+  onChange?: (value: string) => void;
   isConnected?: boolean;
   placeholder?: string;
 }) {
+  const [localValue, setLocalValue] = useState(value);
+
+  // Update local value when prop value changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    if (!isConnected) {
+      onChange?.(newValue);
+    }
+  };
+
   return (
     <input
       type="text"
-      value={value || ""}
-      onChange={(e) => onChange?.(e.target.value)}
+      value={localValue}
+      onChange={handleChange}
       disabled={isConnected}
       placeholder={placeholder}
       className={`w-full px-3 py-1 border rounded-md ${
-        isConnected ? "bg-gray-100" : "bg-white"
-      }`}
+        isConnected
+          ? "bg-gray-100 cursor-not-allowed"
+          : "bg-white hover:border-blue-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      } transition-all duration-200`}
     />
   );
 }
 
 export function NumberInput({
-  value,
+  value = 0,
   onChange,
   isConnected,
   min,
   max,
   step = 1,
 }: {
-  value?: FlowValue;
-  onChange?: (value: FlowValue) => void;
+  value?: number;
+  onChange?: (value: number) => void;
   isConnected?: boolean;
   min?: number;
   max?: number;
   step?: number;
 }) {
+  const [localValue, setLocalValue] = useState(value);
+
+  // Update local value when prop value changes
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = Number(e.target.value);
+    setLocalValue(newValue);
+    if (!isConnected) {
+      onChange?.(newValue);
+    }
+  };
+
   return (
     <input
-      type="text"
-      accept="number"
-      value={value || ""}
-      onChange={(e) => onChange?.(Number(e.target.value))}
+      type="number"
+      value={localValue}
+      onChange={handleChange}
       disabled={isConnected}
       min={min}
       max={max}
       step={step}
       className={`w-full px-3 py-1 border rounded-md ${
-        isConnected ? "bg-gray-100" : "bg-white"
-      }`}
+        isConnected
+          ? "bg-gray-100 cursor-not-allowed"
+          : "bg-white hover:border-blue-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      } transition-all duration-200`}
     />
   );
 }
@@ -246,155 +262,160 @@ export const FlowNumberInput = withFlow(NumberInput, {
   position: Position.Left,
 });
 
-export function Wrapper({
-  children,
-  id,
-  onDelete,
-  showDelete = true,
-  showActions = true,
-}: {
-  children: ReactNode;
-  id: string;
-  onDelete?: () => void;
-  showDelete?: boolean;
-  showActions?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [x, setX] = useState(0);
-  const [y, setY] = useState(0);
-  const { setNodes } = workFlow();
+// export function Wrapper({
+//   children,
+//   id,
+//   onDelete,
+//   showDelete = true,
+//   showActions = true,
+// }: {
+//   children: ReactNode;
+//   id: string;
+//   onDelete?: () => void;
+//   showDelete?: boolean;
+//   showActions?: boolean;
+// }) {
+//   const [isOpen, setIsOpen] = useState(false);
+//   const [x, setX] = useState(0);
+//   const [y, setY] = useState(0);
+//   const { setNodes } = workFlow();
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDelete) {
-      onDelete();
-    } else {
-      setNodes({ type: "remove", id });
-    }
-  };
+//   const handleDelete = (e: React.MouseEvent) => {
+//     e.stopPropagation();
+//     if (onDelete) {
+//       onDelete();
+//     } else {
+//       setNodes({ type: "remove", id });
+//     }
+//   };
 
-  const actions = [
-    {
-      label: "Remove",
-      icon: <Trash size={12} />,
-      onClick: handleDelete,
-    },
-    {
-      label: "Add",
-      icon: <Plus size={12} />,
-      onClick: () => setIsOpen(false),
-    },
-    {
-      label: "Execute",
-      icon: <Play size={12} />,
-      onClick: () => setIsOpen(false),
-    },
-  ];
+//   const actions = {
+//     delete: {
+//       label: "Delete",
+//       icon: <Trash size={16} />,
+//       onClick: handleDelete,
+//     },
+//     execute: {
+//       label: "Execute",
+//       icon: <Play size={16} />,
+//       onClick: () => setIsOpen(false),
+//     },
+//     duplicate: {
+//       label: "Duplicate",
+//       icon: <Copy size={16} />,
+//       onClick: () => setIsOpen(false),
+//     },
+//   };
 
-  return (
-    <div
-      onClick={() => setIsOpen(false)}
-      className="flex flex-col gap-4 relative group"
-      onContextMenu={(e) => {
-        if (showActions) {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-          setX(e.clientX);
-          setY(e.clientY);
-        }
-      }}
-    >
-      {showDelete && (
-        <button
-          onClick={handleDelete}
-          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 
-            hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100
-            focus:opacity-100 focus:outline-none z-50"
-          title="Delete node"
-        >
-          <Trash size={14} />
-        </button>
-      )}
-      {children}
-      {isOpen && showActions && (
-        <div
-          onClick={() => setIsOpen(false)}
-          style={{
-            top: y,
-            left: x,
-          }}
-          className="absolute w-full h-full"
-        >
-          <div className="w-[120px] h-[200px] rounded-lg shadow-md border border-zinc-400 bg-zinc-100 px-2 gap-y-1 overflow-y-auto">
-            {actions.map((action) => (
-              <button
-                key={action.label}
-                onClick={action.onClick}
-                className="w-full text-sm text-zinc-500 rounded-md bg-white cursor-pointer flex flex-row items-center justify-between 
-                gap-2 mt-2 px-4 hover:bg-blue-100 hover:text-blue-500 hover:ring-1 hover:ring-blue-500 hover:shadow-xl hover:shadow-blue-500/20
-                transition-all duration-200"
-              >
-                {action.label}
-                {action.icon}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+//   return (
+//     <div
+//       onClick={() => setIsOpen(false)}
+//       className="flex flex-col gap-4 relative group"
+//       onContextMenu={(e) => {
+//         if (showActions) {
+//           e.preventDefault();
+//           e.stopPropagation();
+//           setIsOpen(!isOpen);
+//           setX(e.clientX);
+//           setY(e.clientY);
+//         }
+//       }}
+//     >
+//       {showDelete && (
+//         <div className="absolute top-2 -right-6 group-hover:opacity-100 opacity-0 transition-opacity duration-200 flex flex-col gap-1">
+//           {Object.entries(actions).map(([key, action]) => (
+//             <button
+//               key={key}
+//               onClick={action.onClick}
+//               className="text-zinc-400 cursor-pointer hover:translate-x-2 transition-all duration-200
+//             focus:opacity-100 z-50 text-xl"
+//               title={action.label}
+//             >
+//               {action.icon}
+//             </button>
+//           ))}
+//         </div>
+//       )}
+//       {children}
+//       {isOpen && showActions && (
+//         <div
+//           onClick={() => setIsOpen(false)}
+//           style={{
+//             top: y,
+//             left: x,
+//           }}
+//           className="absolute w-full h-full"
+//         >
+//           {/*
+//           // TODO : Create Context Menu
+//           <div className="w-[120px] h-[200px] rounded-lg shadow-md border border-zinc-400 bg-zinc-100 px-2 gap-y-1 overflow-y-auto">
+//             {actions.map((action) => (
+//               <button
+//                 key={action.label}
+//                 onClick={action.onClick}
+//                 className="w-full text-sm text-zinc-500 rounded-md bg-white cursor-pointer flex flex-row items-center justify-between
+//                 gap-2 mt-2 px-4 hover:bg-blue-100 hover:text-blue-500 hover:ring-1 hover:ring-blue-500 hover:shadow-xl hover:shadow-blue-500/20
+//                 transition-all duration-200"
+//               >
+//                 {action.label}
+//                 {action.icon}
+//               </button>
+//             ))} */}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
-export function WrapperWithTrigger({
-  children,
-  onTrigger,
-  id,
-}: {
-  children: ReactNode;
-  onTrigger: () => void;
-  id: string;
-}) {
-  const { nodes, edges } = workFlow();
-  const [isTriggered, setIsTriggered] = useState(false);
+// export function WrapperWithTrigger({
+//   children,
+//   onTrigger,
+//   id,
+// }: {
+//   children: ReactNode;
+//   onTrigger: () => void;
+//   id: string;
+// }) {
+//   const { nodes, edges } = workFlow();
+//   const [isTriggered, setIsTriggered] = useState(false);
 
-  const handleTrigger = useCallback((e: React.MouseEvent) => {
-    onTrigger();
-  }, []);
+//   const handleTrigger = useCallback((e: React.MouseEvent) => {
+//     onTrigger();
+//   }, []);
 
-  // Clone children with additional props
-  const childrenWithProps = isValidElement(children)
-    ? cloneElement(children as React.ReactElement<WrapperChildProps>, {
-        isTriggered,
-        onTrigger: handleTrigger,
-      })
-    : children;
+//   // Clone children with additional props
+//   const childrenWithProps = isValidElement(children)
+//     ? cloneElement(children as React.ReactElement<WrapperChildProps>, {
+//         isTriggered,
+//         onTrigger: handleTrigger,
+//       })
+//     : children;
 
-  return (
-    <div className="flex flex-row">
-      <Wrapper id={id}>
-        <div className="flex flex-row items-center -z-1 justify-between absolute -ml-10 hover:-ml-22 transition-all duration-200 mt-8">
-          <button
-            onClick={handleTrigger}
-            className={`${
-              isTriggered
-                ? "bg-orange-200 text-orange-600"
-                : "bg-orange-100 text-orange-500"
-            } rounded-lg px-2 cursor-pointer flex flex-row items-center gap-1 transition-all duration-200`}
-          >
-            Trigger{" "}
-            <CloudLightning
-              size={12}
-              className={isTriggered ? "animate-pulse" : ""}
-            />
-          </button>
-        </div>
+//   return (
+//     <div className="flex flex-row">
+//       <Wrapper id={id}>
+//         <div className="flex flex-row items-center -z-1 justify-between absolute -ml-10 hover:-ml-22 transition-all duration-200 mt-8">
+//           <button
+//             onClick={handleTrigger}
+//             className={`${
+//               isTriggered
+//                 ? "bg-orange-200 text-orange-600"
+//                 : "bg-orange-100 text-orange-500"
+//             } rounded-lg px-2 cursor-pointer flex flex-row items-center gap-1 transition-all duration-200`}
+//           >
+//             Trigger{" "}
+//             <CloudLightning
+//               size={12}
+//               className={isTriggered ? "animate-pulse" : ""}
+//             />
+//           </button>
+//         </div>
 
-        <div>{childrenWithProps}</div>
-      </Wrapper>
-    </div>
-  );
-}
+//         <div>{childrenWithProps}</div>
+//       </Wrapper>
+//     </div>
+//   );
+// }
 
 // Add a helper hook for node updates
 function useNodeUpdate(nodeId: string, initialData: any) {
@@ -429,9 +450,10 @@ function useNodeUpdate(nodeId: string, initialData: any) {
   return [nodeData, updateNodeData] as const;
 }
 
-// Update SendToken to use the update hook
+// Update SendToken to handle automatic data flow
 export function SendToken(props: NodeProps) {
   const { id, data, selected } = props;
+  const { getValue } = useFlow();
   const initialData = {
     amount: 0,
     tokenAddress: "",
@@ -441,6 +463,30 @@ export function SendToken(props: NodeProps) {
   };
   const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
 
+  // Get values from flow context
+  const amountValue = getValue(`${id}-amount`);
+  const tokenAddressValue = getValue(`${id}-tokenAddress`);
+  const recipientValue = getValue(`${id}-recipient`);
+  const ref = useRef<HTMLButtonElement>(null);
+  // // Update node data when flow values change
+  // useEffect(() => {
+  //   if (amountValue !== undefined) {
+  //     updateNodeData({ ...nodeData, amount: Number(amountValue) });
+  //   }
+  // }, [amountValue]);
+
+  // useEffect(() => {
+  //   if (tokenAddressValue !== undefined) {
+  //     updateNodeData({ ...nodeData, tokenAddress: String(tokenAddressValue) });
+  //   }
+  // }, [tokenAddressValue]);
+
+  // useEffect(() => {
+  //   if (recipientValue !== undefined) {
+  //     updateNodeData({ ...nodeData, recipient: String(recipientValue) });
+  //   }
+  // }, [recipientValue]);
+
   return (
     <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
       <div className="absolute -top-6 left-0 text-xs text-gray-500 font-mono">
@@ -448,16 +494,9 @@ export function SendToken(props: NodeProps) {
       </div>
 
       <Wrapper id={id as string}>
-        <WrapperWithTrigger
-          onTrigger={() => {
-            console.log({ nodeData, id });
-          }}
-          id={id as string}
-        >
-          <div
-            id={id as string}
-            className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200"
-          >
+        {/* @ts-ignore */}
+        <WrapperWithTrigger id={id as string} ref={ref}>
+          <div className="w-[300px] p-4 bg-white rounded-lg shadow-md border border-gray-200">
             <div className="flex flex-row items-center justify-between">
               <h3 className="text-lg font-medium mb-4">Send Token</h3>
               <div className="bg-zinc-100 rounded-lg px-2">
@@ -482,6 +521,7 @@ export function SendToken(props: NodeProps) {
                   onChange={(value) => {
                     updateNodeData({ ...nodeData, amount: Number(value) });
                   }}
+                  isConnected={amountValue !== undefined}
                 />
               </div>
 
@@ -498,6 +538,7 @@ export function SendToken(props: NodeProps) {
                       tokenAddress: value as string,
                     });
                   }}
+                  isConnected={tokenAddressValue !== undefined}
                 />
               </div>
 
@@ -511,6 +552,7 @@ export function SendToken(props: NodeProps) {
                   onChange={(value) => {
                     updateNodeData({ ...nodeData, recipient: value as string });
                   }}
+                  isConnected={recipientValue !== undefined}
                 />
                 <Handle
                   id="block-hash"
@@ -527,14 +569,23 @@ export function SendToken(props: NodeProps) {
   );
 }
 
-// Update InputText to use the update hook
+// Update InputText to handle automatic data flow
 export const InputText = (props: NodeProps) => {
   const { id, data, selected } = props;
+  const { getValue } = useFlow();
   const initialData = {
     value: (data as NodeData).value || "",
     ...(data as any),
   };
   const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
+  const flowValue = getValue(id as string);
+
+  // Update node data when flow value changes
+  useEffect(() => {
+    if (flowValue !== undefined) {
+      updateNodeData({ ...nodeData, value: String(flowValue) });
+    }
+  }, [flowValue]);
 
   return (
     <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
@@ -549,13 +600,12 @@ export const InputText = (props: NodeProps) => {
             position={Position.Left}
             className="w-3 h-3 bg-blue-500"
           />
-          <input
-            type="text"
+          <FlowTextInput
             value={nodeData.value}
-            onChange={(e) => {
-              updateNodeData({ ...nodeData, value: e.target.value });
+            onChange={(value) => {
+              updateNodeData({ ...nodeData, value });
             }}
-            className="w-full p-2 border rounded"
+            isConnected={flowValue !== undefined}
           />
           <Handle
             type="source"
@@ -568,14 +618,23 @@ export const InputText = (props: NodeProps) => {
   );
 };
 
-// Update InputNumber to use the update hook
+// Update InputNumber to handle automatic data flow
 export const InputNumber = (props: NodeProps) => {
   const { id, data, selected } = props;
+  const { getValue } = useFlow();
   const initialData = {
     value: (data as NodeData).value || 0,
     ...(data as any),
   };
   const [nodeData, updateNodeData] = useNodeUpdate(id as string, initialData);
+  const flowValue = getValue(id as string);
+
+  // Update node data when flow value changes
+  useEffect(() => {
+    if (flowValue !== undefined) {
+      updateNodeData({ ...nodeData, value: Number(flowValue) });
+    }
+  }, [flowValue]);
 
   return (
     <div className={`relative ${selected ? "ring-2 ring-orange-500" : ""}`}>
@@ -590,13 +649,12 @@ export const InputNumber = (props: NodeProps) => {
             position={Position.Left}
             className="w-3 h-3 bg-blue-500"
           />
-          <input
-            type="number"
+          <FlowNumberInput
             value={nodeData.value}
-            onChange={(e) => {
-              updateNodeData({ ...nodeData, value: Number(e.target.value) });
+            onChange={(value) => {
+              updateNodeData({ ...nodeData, value: Number(value) });
             }}
-            className="w-full p-2 border rounded"
+            isConnected={flowValue !== undefined}
           />
           <Handle
             type="source"
@@ -695,6 +753,7 @@ export function CustomEdge({
     (evt: React.MouseEvent) => {
       evt.stopPropagation();
       setEdges({ type: "remove", id });
+      console.log("Edge removed:", id);
     },
     [id, setEdges]
   );
@@ -720,19 +779,20 @@ export function CustomEdge({
             pointerEvents: "all",
             cursor: "pointer",
           }}
-          className="nodrag nopan"
+          className="nodrag nopan button-edge__label"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {isHovered && (
-            <button
-              onClick={onEdgeClick}
-              className="bg-red-100 hover:bg-red-200 text-red-600 p-1 rounded-full transition-colors duration-200 shadow-sm"
-              style={{ transform: "translate(-50%, -50%)" }}
-            >
-              <Trash size={12} />
-            </button>
-          )}
+          {/* {isHovered && ( */}
+          <button
+            onClick={onEdgeClick}
+            className="button-edge__label-button bg-zinc-100 hover:bg-red-200 hover:text-red-600
+             text-zinc-600 p-0.5 rounded-full transition-colors duration-200 shadow-sm"
+            style={{ transform: "translate(-50%, -50%)" }}
+          >
+            <Trash size={12} />
+          </button>
+          {/* )} */}
         </div>
       </EdgeLabelRenderer>
     </>
