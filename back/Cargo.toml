@@ -1,0 +1,35 @@
+[package]
+name = "deploy-server"
+version = "0.1.0"
+edition = "2021"
+description = "A deployment service for Solana and EVM programs"
+
+[dependencies]
+# Web server
+actix-web = "4.4"
+actix-rt = "2.9"
+tokio = { version = "1.36", features = ["full"] }
+
+# Solana dependencies
+solana-client = "1.17.0"
+solana-sdk = "1.17.0"
+solana-program = "1.17.0"
+
+# Async runtime and utilities
+async-trait = "0.1"
+crossbeam-channel = "0.5"
+dotenv = "0.15"
+env_logger = "0.11"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+shellexpand = "3.1"
+uuid = { version = "1.7", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "2.0.12"
+base64 = "0.22.1"
+tempfile = "3.8.1"
+
+[dev-dependencies]
+tokio-test = "0.4"

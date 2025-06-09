@@ -1,0 +1,28 @@
+{
+  "deployment_id": "1f2391c6-34b9-47f5-9158-f62b96af2e22",
+  "program_type": "solana",
+  "created_at": "2025-06-09T11:39:29.065520983Z",
+  "updated_at": "2025-06-09T11:39:29.066620710Z",
+  "status": "initialized",
+  "entries": [
+    {
+      "timestamp": "2025-06-09T11:39:29.066249204Z",
+      "stage": "initializing",
+      "message": "Starting Solana deployment",
+      "details": {
+        "program_size": 77,
+        "program_type": "solana"
+      }
+    },
+    {
+      "timestamp": "2025-06-09T11:39:29.066619262Z",
+      "stage": "config",
+      "message": "Deployment configuration loaded",
+      "details": {
+        "compute_unit_limit": 1000000,
+        "compute_unit_price": 1,
+        "rpc_url": "https://api.devnet.solana.com"
+      }
+    }
+  ]
+}
