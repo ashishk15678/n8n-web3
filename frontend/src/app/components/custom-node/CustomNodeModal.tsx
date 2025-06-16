@@ -7,7 +7,6 @@ import {
   useCreateCustomNode,
   useUpdateCustomNode,
 } from "@/hooks/useCustomNodes";
-import type { NodeData } from "@/types";
 
 interface CustomNodeModalProps {
   isOpen: boolean;
@@ -29,27 +28,11 @@ export const CustomNodeModal = ({
   editingNodeId,
 }: CustomNodeModalProps) => {
   const { projectId } = useParams();
-  const [nodeData, setNodeData] = useState<NodeData>({
-    label: "",
-    type: "custom",
-    config: {
-      inputs: {
-        value: null,
-        updatedAt: new Date(),
-      },
-      outputs: {
-        value: null,
-        updatedAt: new Date(),
-      },
-    },
-    metadata: {
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      category: "custom",
-      tags: [],
-      description: "",
-    },
-  });
+  const [nodeName, setNodeName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("custom");
+  const [tags, setTags] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
 
   const createMutation = useCreateCustomNode(projectId as string);
   const updateMutation = useUpdateCustomNode(
@@ -61,14 +44,18 @@ export const CustomNodeModal = ({
     e.preventDefault();
     try {
       const data = {
-        name: nodeData.label,
-        description: nodeData.metadata?.description || "",
+        name: nodeName,
+        description: description,
         code,
+        config: {},
+        isPublic,
         metadata: {
-          ...nodeData.metadata,
-          category: nodeData.metadata?.category || "custom",
-          tags: nodeData.metadata?.tags || [],
-          icon: nodeData.metadata?.icon || "⚡",
+          category,
+          tags: tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          icon: "⚡",
         },
       };
 
@@ -125,10 +112,8 @@ export const CustomNodeModal = ({
                 </label>
                 <input
                   type="text"
-                  value={nodeData.label}
-                  onChange={(e) =>
-                    setNodeData({ ...nodeData, label: e.target.value })
-                  }
+                  value={nodeName}
+                  onChange={(e) => setNodeName(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                   placeholder="My Custom Node"
                   required
@@ -140,16 +125,8 @@ export const CustomNodeModal = ({
                   Description
                 </label>
                 <textarea
-                  value={nodeData.metadata?.description}
-                  onChange={(e) =>
-                    setNodeData({
-                      ...nodeData,
-                      metadata: {
-                        ...nodeData.metadata,
-                        description: e.target.value,
-                      },
-                    })
-                  }
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                   rows={3}
                   placeholder="What does this node do?"
@@ -161,16 +138,8 @@ export const CustomNodeModal = ({
                   Category
                 </label>
                 <select
-                  value={nodeData.metadata?.category}
-                  onChange={(e) =>
-                    setNodeData({
-                      ...nodeData,
-                      metadata: {
-                        ...nodeData.metadata,
-                        category: e.target.value,
-                      },
-                    })
-                  }
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 >
                   <option value="web3">Web3</option>
@@ -185,16 +154,8 @@ export const CustomNodeModal = ({
                 </label>
                 <input
                   type="text"
-                  value={nodeData.metadata?.tags?.join(", ")}
-                  onChange={(e) =>
-                    setNodeData({
-                      ...nodeData,
-                      metadata: {
-                        ...nodeData.metadata,
-                        tags: e.target.value.split(",").map((t) => t.trim()),
-                      },
-                    })
-                  }
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                   placeholder="ethereum, transaction, custom"
                 />
@@ -204,16 +165,8 @@ export const CustomNodeModal = ({
                 <input
                   type="checkbox"
                   id="isPublic"
-                  checked={nodeData.metadata?.isPublic}
-                  onChange={(e) =>
-                    setNodeData({
-                      ...nodeData,
-                      metadata: {
-                        ...nodeData.metadata,
-                        isPublic: e.target.checked,
-                      },
-                    })
-                  }
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                 />
                 <label

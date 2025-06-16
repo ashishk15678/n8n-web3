@@ -10,7 +10,6 @@ import {
   Clock,
   Play,
   AlertCircle,
-  CheckCircle2,
   PauseCircle,
   Workflow,
   Activity,
@@ -19,9 +18,7 @@ import {
   X,
   Trash,
   Search,
-  Filter,
   ChevronDown,
-  ArrowUpDown,
   FolderKanban,
 } from "lucide-react";
 

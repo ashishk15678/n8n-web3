@@ -11,9 +11,11 @@ import {
   FolderPlus,
   Trash,
   X,
+  LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { useCreateProject, useDeleteProject } from "@/server-store";
+import { authClient } from "@/lib/auth";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -133,6 +135,15 @@ export function LeftNavbar() {
     });
   };
 
+  const handleSignOut = async () => {
+    try {
+      await authClient.signOut();
+      // The auth middleware will handle the redirect
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
+
   return (
     <div
       className={`h-screen bg-white border-r border-zinc-200 flex flex-col transition-all duration-300 ease-in-out ${
@@ -228,6 +239,17 @@ export function LeftNavbar() {
             </div>
           )}
         </div>
+
+        {/* Sign Out Button */}
+        <button
+          onClick={handleSignOut}
+          className={`mt-3 w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200 rounded-lg ${
+            !isExpanded ? "justify-center" : ""
+          }`}
+        >
+          <LogOut size={16} />
+          {isExpanded && <span>Sign Out</span>}
+        </button>
       </div>
 
       {/* Create Project Modal */}

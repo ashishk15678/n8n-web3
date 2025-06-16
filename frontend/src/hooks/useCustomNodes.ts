@@ -1,16 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { NodeData } from "@/types";
 
-// Types
+// Types - Updated to match database schema
 export interface CustomNode {
   id: string;
   name: string;
   description: string;
   code: string;
+  config: any;
+  projectId: string;
+  createdBy: string;
+  isPublic: boolean;
+  version: number;
   metadata?: {
     category?: string;
     tags?: string[];
+    icon?: string;
+    isPublic?: boolean;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -40,7 +46,9 @@ async function fetchAPI<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || "API request failed");
+    throw new Error(
+      error.error?.message || error.error || "API request failed"
+    );
   }
 
   return response.json();
@@ -60,9 +68,14 @@ export function useCreateCustomNode(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      data: Omit<CustomNode, "id" | "createdAt" | "updatedAt">
-    ) => {
+    mutationFn: async (data: {
+      name: string;
+      description: string;
+      code: string;
+      config?: any;
+      isPublic?: boolean;
+      metadata?: any;
+    }) => {
       return fetchAPI<CustomNode>(API.customNodes.create(projectId), {
         method: "POST",
         body: JSON.stringify(data),
@@ -84,9 +97,14 @@ export function useUpdateCustomNode(projectId: string, nodeId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      data: Partial<Omit<CustomNode, "id" | "createdAt" | "updatedAt">>
-    ) => {
+    mutationFn: async (data: {
+      name?: string;
+      description?: string;
+      code?: string;
+      config?: any;
+      isPublic?: boolean;
+      metadata?: any;
+    }) => {
       return fetchAPI<CustomNode>(API.customNodes.update(projectId, nodeId), {
         method: "PUT",
         body: JSON.stringify(data),

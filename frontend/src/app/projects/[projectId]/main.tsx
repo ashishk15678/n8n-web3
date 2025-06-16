@@ -59,7 +59,7 @@ import {
   useCustomNodes,
   useCreateCustomNode,
   useUpdateCustomNode,
-  type CustomNode as CustomNodeDefinition,
+  type CustomNode as CustomNodeType,
 } from "@/hooks/useCustomNodes";
 import { CustomNodeModal } from "@/app/components/custom-node/CustomNodeModal";
 
@@ -851,17 +851,14 @@ export const NodePalette = memo(function NodePalette() {
   // Group nodes by category
   const nodesByCategory = useMemo(() => {
     if (!customNodes) return {};
-    return customNodes.reduce<Record<string, CustomNodeDefinition[]>>(
-      (acc, node) => {
-        const category = node.metadata?.category || "uncategorized";
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(node);
-        return acc;
-      },
-      {}
-    );
+    return customNodes.reduce<Record<string, CustomNodeType[]>>((acc, node) => {
+      const category = node.metadata?.category || "uncategorized";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(node);
+      return acc;
+    }, {});
   }, [customNodes]);
 
   const handleCreateNode = useCallback(() => {
