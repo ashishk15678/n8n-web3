@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { WrapperWithTrigger } from "./wrapper";
+import { WrapperTrigger } from "./wrapper";
 import {
   createSolanaRpc,
   createSolanaRpcSubscriptions,
@@ -38,7 +38,7 @@ export function DeployContract({ id }: { id: string }) {
   return (
     <>
       {/* @ts-ignore */}
-      <WrapperWithTrigger ref={ref} id={id}>
+      <WrapperTrigger ref={ref} id={id}>
         <div>
           <h1>Deploy Contract</h1>
 
@@ -48,7 +48,7 @@ export function DeployContract({ id }: { id: string }) {
             onChange={(e) => setContractCode(e.target.value)}
           />
         </div>
-      </WrapperWithTrigger>
+      </WrapperTrigger>
     </>
   );
 }

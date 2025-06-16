@@ -47,6 +47,14 @@ export default function EnvModal() {
     }
   };
 
+  if (isEnvModalOpen) {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        setIsEnvModalOpen(false);
+      }
+    });
+  }
+
   return (
     <>
       {isEnvModalOpen && (
@@ -218,7 +226,7 @@ export function EnvModalButton() {
   const { setIsEnvModalOpen } = useEnv();
   return (
     <button
-      className="bg-blue-500 text-white px-4 rounded-md absolute top-4 cursor-pointer shadow-md left-24"
+      className="bg-blue-500 text-white px-4 rounded-md cursor-pointer shadow-md"
       onClick={() => setIsEnvModalOpen(true)}
     >
       Env

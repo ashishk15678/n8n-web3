@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { WrapperWithTrigger, Wrapper } from "../wrapper";
+import { Wrapper } from "../wrapper";
 import { Input } from "../../env";
 import { ethers } from "ethers";
 
@@ -275,102 +275,99 @@ export default function EthTransaction({ id }: { id: string }) {
   return (
     <div className="bg-white rounded-md p-4 ring ring-zinc-200 shadow-md">
       <Wrapper id={id}>
-        {/* @ts-ignore */}
-        <WrapperWithTrigger id={id} ref={ref}>
-          <div className="flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-zinc-500">
-                {walletState.chain === "ethereum"
-                  ? "Send ETH Transaction"
-                  : "Send SOL Transaction"}
-              </span>
-              {walletState.isConnected ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400">
-                    {walletState.address?.slice(0, 6)}...
-                    {walletState.address?.slice(-4)}
-                  </span>
-                  <button
-                    onClick={disconnectWallet}
-                    className="text-xs text-red-500 hover:text-red-600"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => connectWallet("metamask")}
-                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                  >
-                    Connect MetaMask
-                  </button>
-                  <button
-                    onClick={() => connectWallet("phantom")}
-                    className="text-xs bg-purple-500 text-white px-2 py-1 rounded hover:bg-purple-600"
-                  >
-                    Connect Phantom
-                  </button>
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-zinc-500">
+              {walletState.chain === "ethereum"
+                ? "Send ETH Transaction"
+                : "Send SOL Transaction"}
+            </span>
+            {walletState.isConnected ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">
+                  {walletState.address?.slice(0, 6)}...
+                  {walletState.address?.slice(-4)}
+                </span>
+                <button
+                  onClick={disconnectWallet}
+                  className="text-xs text-red-500 hover:text-red-600"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => connectWallet("metamask")}
+                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                >
+                  Connect MetaMask
+                </button>
+                <button
+                  onClick={() => connectWallet("phantom")}
+                  className="text-xs bg-purple-500 text-white px-2 py-1 rounded hover:bg-purple-600"
+                >
+                  Connect Phantom
+                </button>
+              </div>
+            )}
+          </div>
+
+          {walletState.isConnected && (
+            <>
+              <div>
+                <label htmlFor="recipient" className="text-sm text-zinc-400">
+                  Recipient Address
+                </label>
+                <Input
+                  props={{ type: "text", id: "recipient" }}
+                  onChange={(e) => setData({ recipient: e.target.value })}
+                  value={data.recipient}
+                  placeholder={
+                    walletState.chain === "ethereum"
+                      ? "0x..."
+                      : "Solana address..."
+                  }
+                />
+              </div>
+
+              <div>
+                <label htmlFor="value" className="text-sm text-zinc-400">
+                  Amount ({walletState.chain === "ethereum" ? "ETH" : "SOL"})
+                </label>
+                <Input
+                  props={{
+                    type: "number",
+                    id: "value",
+                    step: "0.000000000000000001",
+                  }}
+                  onChange={(e) => setData({ value: e.target.value })}
+                  value={data.value}
+                  placeholder="0.0"
+                />
+              </div>
+
+              {walletState.chain === "ethereum" && (
+                <div>
+                  <label htmlFor="gasLimit" className="text-sm text-zinc-400">
+                    Gas Limit (optional)
+                  </label>
+                  <Input
+                    props={{ type: "number", id: "gasLimit" }}
+                    onChange={(e) => setData({ gasLimit: e.target.value })}
+                    value={data.gasLimit}
+                    placeholder="21000"
+                  />
                 </div>
               )}
-            </div>
+            </>
+          )}
 
-            {walletState.isConnected && (
-              <>
-                <div>
-                  <label htmlFor="recipient" className="text-sm text-zinc-400">
-                    Recipient Address
-                  </label>
-                  <Input
-                    props={{ type: "text", id: "recipient" }}
-                    onChange={(e) => setData({ recipient: e.target.value })}
-                    value={data.recipient}
-                    placeholder={
-                      walletState.chain === "ethereum"
-                        ? "0x..."
-                        : "Solana address..."
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="value" className="text-sm text-zinc-400">
-                    Amount ({walletState.chain === "ethereum" ? "ETH" : "SOL"})
-                  </label>
-                  <Input
-                    props={{
-                      type: "number",
-                      id: "value",
-                      step: "0.000000000000000001",
-                    }}
-                    onChange={(e) => setData({ value: e.target.value })}
-                    value={data.value}
-                    placeholder="0.0"
-                  />
-                </div>
-
-                {walletState.chain === "ethereum" && (
-                  <div>
-                    <label htmlFor="gasLimit" className="text-sm text-zinc-400">
-                      Gas Limit (optional)
-                    </label>
-                    <Input
-                      props={{ type: "number", id: "gasLimit" }}
-                      onChange={(e) => setData({ gasLimit: e.target.value })}
-                      value={data.gasLimit}
-                      placeholder="21000"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            <p
-              className="text-sm text-red-500 font-bold"
-              id="errorEthTransaction"
-            ></p>
-          </div>
-        </WrapperWithTrigger>
+          <p
+            className="text-sm text-red-500 font-bold"
+            id="errorEthTransaction"
+          ></p>
+        </div>
       </Wrapper>
     </div>
   );

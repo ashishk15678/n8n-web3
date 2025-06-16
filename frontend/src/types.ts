@@ -38,6 +38,17 @@ export interface NodeData extends Record<string, unknown> {
     tags?: string[];
     description?: string;
     [key: string]: any;
+
+    // if the block is connected to another block
+
+    // from source
+    inputs?: {
+      id: string;
+      value?: any;
+    };
+    // to handle
+    return?: any;
+    isConnected?: boolean;
   };
   [key: string]: unknown;
 }

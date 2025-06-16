@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Project, User } from "./generated/prisma";
 import { Edge, Node } from "@xyflow/react";
-import { prisma } from "./lib/db";
-import bcrypt from "bcryptjs";
 
 // API endpoints
 const API = {
@@ -11,6 +9,7 @@ const API = {
     create: "/api/projects",
     get: (projectId: string) => `/api/projects?projectId=${projectId}`,
     update: (projectId: string) => `/api/projects/${projectId}/workflow`,
+    delete: (projectId: string) => `/api/projects/${projectId}`,
   },
   users: {
     get: () => `/api/user`,
@@ -67,10 +66,15 @@ export function useUpdateWorkflow() {
 // Query hooks
 export function useProject(projectId?: string) {
   if (projectId == undefined || projectId == null) {
-    return useQuery({
+    const query = useQuery({
       queryKey: ["projects"],
       queryFn: () => fetchAPI<Project[]>(API.projects.list()),
     });
+
+    // if (query) {
+    //   return redirect("/projects");
+    // }
+    return query;
   }
 
   return useQuery({
@@ -212,6 +216,27 @@ export function useUpdateEnv() {
     onSuccess: () => {
       // Invalidate and refetch the env query
       queryClient.invalidateQueries({ queryKey: ["env"] });
+    },
+  });
+}
+
+// Add delete project mutation
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await fetchAPI<{ success: boolean }>(
+        API.projects.delete(projectId),
+        {
+          method: "DELETE",
+        }
+      );
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch projects list
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 }

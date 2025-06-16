@@ -8,6 +8,8 @@ import { WalletProviders } from "@/providers/WalletProvider";
 import dynamic from "next/dynamic";
 import EnvModal from "./components/env";
 import { Toaster } from "sonner";
+import { ErrorBoundary } from "@/app/components/error-boundary/ErrorBoundary";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,14 +32,16 @@ export default function RootLayout({
           name="description"
           content="n8n Web3 is a platform for building and deploying web3 applications , all through a single interface."
         />
-        <WalletProviders>
-          <WalletButton />
-          <QueryClientProvider client={queryClient}>
-            <AllRoutes />
-            <EnvModal />
-            <Toaster />
-          </QueryClientProvider>
-        </WalletProviders>
+        <ErrorBoundary>
+          <WalletProviders>
+            <WalletButton />
+            <QueryClientProvider client={queryClient}>
+              <AllRoutes />
+              <EnvModal />
+              <Toaster />
+            </QueryClientProvider>
+          </WalletProviders>
+        </ErrorBoundary>
       </body>
     </html>
   );

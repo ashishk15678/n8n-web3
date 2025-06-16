@@ -46,12 +46,15 @@ export async function PUT(request: NextRequest) {
 }
 
 // Optional: Add GET method to fetch current workflow
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const { projectId } = params;
+    const projectId = await request?.nextUrl.href.split("/")[5];
+    console.log({ projectId });
+    if (!projectId)
+      return NextResponse.json(
+        { success: false, message: "Project id required" },
+        { status: 400 }
+      );
 
     const project = await prisma.project.findUnique({
       where: {
