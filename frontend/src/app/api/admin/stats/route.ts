@@ -41,9 +41,7 @@ export async function GET(request: Request) {
       prisma.project.count(),
       // Total workflows (sum of all nodes in projects)
       prisma.project.aggregate({
-        _count: {
-          nodes: true,
-        },
+        _count: {},
       }),
       // Recent activity logs
       prisma.log.findMany({
@@ -76,7 +74,7 @@ export async function GET(request: Request) {
       pendingUsers,
       suspendedUsers,
       totalProjects,
-      totalWorkflows: totalWorkflows._count.nodes || 0,
+      totalWorkflows: totalWorkflows._count || 0,
       recentActivity,
     });
   } catch (error) {

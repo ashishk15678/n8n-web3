@@ -50,20 +50,18 @@ model Env {
 }
 
 model Project {
-  id          String  @id @default(uuid())
+  id          String       @id @default(cuid())
   name        String
   description String?
-
-  nodes Json[]
-  edges Json[]
-  data  Json[]
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-  logs   Log[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  nodes       Node[]
+  edges       Edge[]
+  data        Json[]
+  logs        Log[]
+  customNodes CustomNode[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([userId])
   @@map("projects")
@@ -143,6 +141,61 @@ model Settings {
   language           String   @default("en")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+}
+
+model CustomNode {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  code        String // The actual node component code
+  config      Json // Additional configuration (inputs, outputs, etc.)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String // userId who created this custom node
+  isPublic    Boolean  @default(false) // Whether this node can be used by other projects
+  version     Int      @default(1) // For versioning custom nodes
+  metadata    Json? // Additional metadata like tags, category, etc.
+  Node        Node[]
+
+  @@index([projectId])
+  @@index([createdBy])
+}
+
+model Node {
+  id           String      @id @default(cuid())
+  type         String // Can be built-in types or custom node IDs
+  position     Json // { x: number, y: number }
+  data         Json // Node data including custom node specific data
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceEdges  Edge[]      @relation("SourceNode")
+  targetEdges  Edge[]      @relation("TargetNode")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  customNodeId String? // Reference to CustomNode if this is a custom node instance
+  customNode   CustomNode? @relation(fields: [customNodeId], references: [id])
+
+  @@index([projectId])
+  @@index([customNodeId])
+}
+
+model Edge {
+  id         String   @id @default(cuid())
+  source     String
+  target     String
+  sourceNode Node     @relation("SourceNode", fields: [source], references: [id])
+  targetNode Node     @relation("TargetNode", fields: [target], references: [id])
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  data       Json? // Edge data like labels, styles, etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([source])
+  @@index([target])
 }
 
 enum LogType {

@@ -38,9 +38,15 @@ export async function ServerAuth(
     );
   }
 
-  const user = await (await auth.api.getSession({
-    headers: request.headers,
-  }))!.user;
+  const user = await (async () => {
+    const data = await auth.api.getSession({
+      headers: request.headers,
+    });
+    if (data instanceof NextResponse) {
+      return data;
+    }
+    return data?.user;
+  })();
   if (!user) {
     return NextResponse.json(
       {

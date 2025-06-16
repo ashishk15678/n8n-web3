@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import NotFound from "@/app/not-found";
 import ProjectRoute from "@/app/projects/[projectId]/page";
 import { authClient } from "./lib/auth";
@@ -48,18 +48,21 @@ export default function AllRoutes() {
       element: <AdminDashboard />,
     },
   ];
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        {protectedRoutes.map((route) => (
-          <Route
-            key={route.path}
-            path={route.path}
-            element={user ? <Layout>{route.element}</Layout> : <SignIn />}
-          />
-        ))}
+        {
+          // auth middleware handles
+          protectedRoutes.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={user ? <Layout>{route.element}</Layout> : <SignIn />}
+            />
+          ))
+        }
+        <Route path="/signin" element={<SignIn />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

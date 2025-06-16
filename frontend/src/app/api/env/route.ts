@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth, ServerAuth } from "@/lib/auth";
+import { ServerAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+
 export async function GET(req: Request) {
   const user = await ServerAuth(req);
   if (user instanceof NextResponse) {
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
   });
   return NextResponse.json(envs);
 }
+
 export async function PUT(req: Request) {
   const user = await ServerAuth(req);
   if (user instanceof NextResponse) {

@@ -1,61 +1,92 @@
-import { prisma } from "@/lib/db";
-import { Project } from "@/generated/prisma";
-import {
-  tryCatch,
-  createErrorResponse,
-  validateRequired,
-} from "@/lib/api-utils";
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import {
+  handleApiError,
+  requireAuth,
+  notFound,
+  validationError,
+  ApiError,
+  HTTP_STATUS,
+  ERROR_CODES,
+} from "@/lib/api-error";
 
 // GET /api/projects - Get all projects for a user
-export const GET = tryCatch(async (request: Request) => {
-  const { searchParams } = new URL(request.url);
+export async function GET(request: Request) {
+  try {
+    const session = await requireAuth(request);
 
-  // auth check
-  const authUser = (await auth.api.getSession({
-    headers: request.headers,
-  }))!.user;
+    const projects = await prisma.project.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  if (!authUser) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.json(projects);
+  } catch (error) {
+    return handleApiError(error);
   }
+}
 
-  const projectId = searchParams.get("projectId");
+// POST /api/projects - Create a new project
+export async function POST(request: Request) {
+  try {
+    const session = await requireAuth(request);
+    const body = await request.json();
 
-  if (projectId) {
+    if (!body.name) {
+      validationError("Project name is required");
+    }
+
+    const project = await prisma.project.create({
+      data: {
+        name: body.name,
+        userId: session.user.id,
+      },
+    });
+
+    return NextResponse.json(project);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await requireAuth(request);
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get("id");
+
+    if (!projectId) {
+      validationError("Project ID is required");
+      return;
+    }
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
     });
-    return project;
+
+    if (!project) {
+      notFound("Project not found");
+      return;
+    }
+
+    if (project.userId !== session.user.id) {
+      throw new ApiError(
+        HTTP_STATUS.FORBIDDEN,
+        "You don't have permission to delete this project",
+        ERROR_CODES.INSUFFICIENT_PERMISSIONS
+      );
+    }
+
+    await prisma.project.delete({
+      where: { id: projectId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return handleApiError(error);
   }
-
-  const projects = await prisma.project.findMany({
-    where: { userId: authUser.id },
-    include: {
-      user: true,
-    },
-  });
-
-  return projects;
-}, "Failed to fetch projects");
-
-// POST /api/projects - Create a new project
-export const POST = tryCatch(async (request: Request) => {
-  const body = await request.json();
-  validateRequired(body, ["userId", "project"]);
-
-  const { userId, project } = body;
-
-  const newProject = await prisma.project.create({
-    data: {
-      ...project,
-      userId,
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  return newProject;
-}, "Failed to create project");
+}

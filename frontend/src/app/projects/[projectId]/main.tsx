@@ -3,7 +3,14 @@
 import "@/app/globals.css";
 
 import { Link, Navigate, useParams } from "react-router";
-import React, { useCallback, useEffect, useState, useMemo, memo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  memo,
+  type FC,
+} from "react";
 import { useProject, useUpdateWorkflow, useWorkflow } from "@/server-store";
 import {
   Background,
@@ -12,6 +19,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Edge,
+  Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -35,13 +43,110 @@ import {
   X,
   Search,
   ChevronDown,
+  ArrowDownAz,
+  Download,
+  Upload,
 } from "lucide-react";
-import { CodeEditor } from "@/app/components/code-editor/CodeEditor";
 import { EnvModalButton } from "@/app/components/env";
 import EthTransaction from "@/app/components/react-flow/eth/transaction";
 import { cn } from "@/lib/utils";
 import { debounce } from "lodash";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { type NodeData, type EdgeData, type WorkflowData } from "@/types";
+import type { Node as FlowNode, Edge as FlowEdge } from "@xyflow/react";
+import {
+  useCustomNodes,
+  useCreateCustomNode,
+  useUpdateCustomNode,
+  type CustomNode as CustomNodeDefinition,
+} from "@/hooks/useCustomNodes";
+import { CustomNodeModal } from "@/app/components/custom-node/CustomNodeModal";
 
+// Define WorkflowStore type
+type WorkflowStore = {
+  nodes: FlowNode<NodeData>[];
+  edges: FlowEdge<EdgeData>[];
+  setNodes: (change: any) => void;
+  setEdges: (
+    edge:
+      | FlowEdge<EdgeData>
+      | { type: "clear" }
+      | { type: "remove"; id: string }
+  ) => void;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+  debouncedUpdate: (callback: () => void, immediate?: boolean) => void;
+  workflowData: WorkflowData | null;
+  setWorkflowData: (data: WorkflowData) => void;
+};
+
+// Custom node template
+const customNodeTemplate = `import { Handle, Position } from '@xyflow/react';
+
+interface CustomNodeProps {
+  data: {
+    label: string;
+    inputs?: { name: string; value: any }[];
+    outputs?: { name: string; value: any }[];
+    config?: {
+      color?: string;
+      icon?: string;
+    };
+  };
+}
+
+export default function CustomNode({ data }: CustomNodeProps) {
+  const { label, inputs = [], outputs = [], config = {} } = data;
+  const { color = '#ff6b6b', icon = '⚡' } = config;
+
+  return (
+    <div className="p-4 rounded-lg shadow-lg" style={{ borderColor: color }}>
+      {/* Input Handles */}
+      {inputs.map((input, index) => (
+        <Handle
+          key={\`input-\${index}\`}
+          type="target"
+          position={Position.Left}
+          id={input.name}
+          className="w-3 h-3 bg-blue-500"
+          style={{ top: \`\${(index + 1) * 25}%\` }}
+        />
+      ))}
+
+      <div className="text-center">
+        <div className="text-2xl mb-2">{icon}</div>
+        <h3 className="text-lg font-semibold">{label}</h3>
+        
+        {/* Input Fields */}
+        {inputs.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {inputs.map((input, index) => (
+              <div key={\`input-\${index}\`} className="text-sm">
+                <span className="text-gray-500">{input.name}:</span>{' '}
+                <span className="font-mono">{input.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Output Handles */}
+      {outputs.map((output, index) => (
+        <Handle
+          key={\`output-\${index}\`}
+          type="source"
+          position={Position.Right}
+          id={output.name}
+          className="w-3 h-3 bg-green-500"
+          style={{ top: \`\${(index + 1) * 25}%\` }}
+        />
+      ))}
+    </div>
+  );
+}`;
+
+// Update node types to include custom nodes
 const nodeTypes = {
   sendtoken: SendToken,
   inputtext: InputText,
@@ -50,6 +155,7 @@ const nodeTypes = {
   ethTransaction: EthTransaction,
 };
 
+// Update edge types to include custom node edges
 const edgeTypes = {
   default: CustomEdge,
   "sendtoken-edge": CustomEdge,
@@ -59,7 +165,7 @@ const edgeTypes = {
   "ethTransaction-edge": CustomEdge,
 };
 
-// Define node types
+// Update NodeType to include custom nodes
 type NodeType =
   | "sendtoken"
   | "ethTransaction"
@@ -67,14 +173,25 @@ type NodeType =
   | "inputnumber"
   | "custom";
 
+// Update NodeDefinition interface to include category
 interface NodeDefinition {
   type: NodeType;
   name: string;
   icon: string;
+  category?: string;
+  config?: CustomNodeConfig;
+  metadata?: {
+    category?: string;
+    tags?: string[];
+    icon?: string;
+  };
 }
 
 interface NodeWithCategory extends NodeDefinition {
-  category?: string;
+  category: string;
+  isCustom?: boolean;
+  customNodeId?: string;
+  description?: string;
 }
 
 // Memoize the node categories since they don't change
@@ -151,6 +268,124 @@ const CategoryButton = memo(
 
 CategoryButton.displayName = "CategoryButton";
 
+// Add custom node types
+interface CustomNodeConfig {
+  inputs?: {
+    name: string;
+    type: string;
+    description?: string;
+    required?: boolean;
+  }[];
+  outputs?: {
+    name: string;
+    type: string;
+    description?: string;
+  }[];
+  category?: string;
+  tags?: string[];
+}
+
+// Add a CreateCustomNodeButton component
+const CreateCustomNodeButton = memo(({ onClick }: { onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 
+    hover:bg-orange-100 hover:text-orange-700 transition-all duration-200 
+    cursor-pointer border border-orange-200 mb-4"
+  >
+    <Plus size={16} className="text-orange-500" />
+    <span>Create Custom Node</span>
+  </button>
+));
+
+CreateCustomNodeButton.displayName = "CreateCustomNodeButton";
+
+// ImportExportButtons component with proper typing
+const ImportExportButtons = memo<{
+  nodes: FlowNode<NodeData>[];
+  edges: FlowEdge<EdgeData>[];
+  onImport: (data: {
+    nodes: FlowNode<NodeData>[];
+    edges: FlowEdge<EdgeData>[];
+  }) => void;
+}>(({ nodes, edges, onImport }) => {
+  const handleExport = () => {
+    const data: WorkflowData = {
+      id: "export-" + Date.now(),
+      name: "Exported Workflow",
+      version: 1,
+      nodes: nodes as FlowNode<NodeData>[],
+      edges: edges as FlowEdge<EdgeData>[],
+      metadata: {
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: "draft",
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "workflow-export-" + new Date().toISOString() + ".json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as WorkflowData;
+        if (data.nodes && data.edges) {
+          onImport({
+            nodes: data.nodes as FlowNode<NodeData>[],
+            edges: data.edges as FlowEdge<EdgeData>[],
+          });
+          toast.success("Workflow imported successfully!");
+        } else {
+          toast.error("Invalid workflow file format");
+        }
+      } catch (error) {
+        toast.error("Failed to import workflow");
+        console.error(error);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="flex gap-2 mb-4">
+      <button
+        onClick={handleExport}
+        className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+      >
+        <Download size={16} />
+        Export Workflow
+      </button>
+      <label className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+        <Upload size={16} />
+        Import Workflow
+        <input
+          type="file"
+          accept=".json"
+          onChange={handleImport}
+          className="hidden"
+        />
+      </label>
+    </div>
+  );
+});
+
+ImportExportButtons.displayName = "ImportExportButtons";
+
 export function ProjectPageContent({ projectId }: { projectId: string }) {
   const { data: project } = useProject(projectId);
   const { data: workflowData, isLoading: isWorkflowLoading } =
@@ -163,7 +398,7 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
     loading,
     setLoading,
     debouncedUpdate,
-  } = workFlow();
+  } = workFlow() as WorkflowStore;
   const updateWorkflow = useUpdateWorkflow();
 
   useEffect(() => {
@@ -300,6 +535,42 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  const handleImport = useCallback(
+    (data: { nodes: any[]; edges: any[] }) => {
+      // Clear existing nodes and edges
+      setNodes({ type: "remove", id: "all" });
+      setEdges({ type: "clear" });
+
+      // Small delay to ensure clearing is complete
+      setTimeout(() => {
+        // Add imported nodes
+        data.nodes.forEach((node) => {
+          setNodes({ type: "add", node });
+        });
+
+        // Add imported edges
+        data.edges.forEach((edge) => {
+          setEdges(edge);
+        });
+
+        // Update the workflow in the database
+        updateWorkflow.mutate(
+          { projectId, nodes: data.nodes, edges: data.edges },
+          {
+            onSuccess: () => {
+              toast.success("Workflow imported and saved successfully");
+            },
+            onError: (error) => {
+              toast.error("Failed to save imported workflow");
+              console.error(error);
+            },
+          }
+        );
+      }, 100);
+    },
+    [projectId, setNodes, setEdges, updateWorkflow]
+  );
+
   return (
     <div>
       {/* Top bar  */}
@@ -318,10 +589,17 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
             <EnvModalButton />
           </div>{" "}
         </div>
-        <InputBox />
-        <div className="flex flex-row items-center gap-2">
-          <ClearButton />
-          <SaveButton />
+        <div className="flex items-center gap-4">
+          <ImportExportButtons
+            nodes={nodes}
+            edges={edges}
+            onImport={handleImport}
+          />
+          <InputBox />
+          <div className="flex flex-row items-center gap-2">
+            <ClearButton />
+            <SaveButton />
+          </div>
         </div>
         <div />
       </div>
@@ -360,12 +638,19 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
           </ReactFlowProvider>
         </div>
         <div className="absolute top-4 right-40">
-          <button
-            className="bg-white p-2 rounded-full"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            <Menu size={24} />
-          </button>
+          <div className="flex flex-row items-center gap-2 outline outline-2 outline-zinc-200 rounded-full animate-pulse cursor-pointer">
+            <button
+              className={cn(
+                "bg-white p-2 rounded-full transition-all duration-300",
+                isSidebarOpen ? "rotate-270" : "rotate-0"
+              )}
+              onClick={() => {
+                setIsSidebarOpen(!isSidebarOpen);
+              }}
+            >
+              <ArrowDownAz />
+            </button>
+          </div>
         </div>
         <div
           className={cn(
@@ -381,7 +666,8 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
 }
 
 export function ClearButton() {
-  const { nodes, setNodes, setEdges, debouncedUpdate } = workFlow();
+  const { nodes, setNodes, setEdges, debouncedUpdate } =
+    workFlow() as WorkflowStore;
   const { projectId } = useParams();
   const updateWorkflow = useUpdateWorkflow();
 
@@ -423,9 +709,9 @@ export function ClearButton() {
 }
 
 export function SaveButton() {
-  const { loading, setLoading } = workFlow();
+  const { loading, setLoading } = workFlow() as WorkflowStore;
   const updateWorkflow = useUpdateWorkflow();
-  const { nodes, edges } = workFlow();
+  const { nodes, edges } = workFlow() as WorkflowStore;
   const { projectId } = useParams();
 
   const handleSave = async () => {
@@ -541,39 +827,221 @@ export function InputBox() {
   );
 }
 
-export const NodePalette = memo(() => {
-  const { setNodes } = workFlow();
+// NodePalette component with proper typing
+export const NodePalette = memo(function NodePalette() {
+  const { projectId } = useParams();
+  const workflow = workFlow();
+  const updateWorkflow = useUpdateWorkflow();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const [customCode, setCustomCode] = useState<string>(`// Custom Node Component
-function CustomNode({ data }) {
-  const { label, type, value, color = '#ff6b6b' } = data;
-  return (
-    <div className="p-4 rounded-lg shadow-lg" style={{ borderColor: color }}>
-      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-blue-500" />
-      <div className="text-center">
-        <h3 className="text-lg font-semibold">{label}</h3>
-        <p className="text-sm text-gray-600">Type: {type}</p>
-        {value && (
-          <p className="mt-2 text-sm font-mono bg-gray-100 p-1 rounded">{value}</p>
-        )}
-      </div>
-      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-green-500" />
-    </div>
-  );
-}`);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
-  // Memoize the flattened nodes array
-  const allNodes = useMemo(
-    () =>
-      Object.entries(NODE_CATEGORIES).flatMap(([category, nodes]) =>
-        nodes.map((node) => ({ ...node, category }))
-      ),
-    []
+  // Add custom nodes to the categories
+  const { data: customNodes, refetch: refetchCustomNodes } = useCustomNodes(
+    projectId as string
+  );
+  const createMutation = useCreateCustomNode(projectId as string);
+  const updateMutation = useUpdateCustomNode(
+    projectId as string,
+    editingNodeId as string
   );
 
-  // Memoize filtered nodes
+  // Group nodes by category
+  const nodesByCategory = useMemo(() => {
+    if (!customNodes) return {};
+    return customNodes.reduce<Record<string, CustomNodeDefinition[]>>(
+      (acc, node) => {
+        const category = node.metadata?.category || "uncategorized";
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(node);
+        return acc;
+      },
+      {}
+    );
+  }, [customNodes]);
+
+  const handleCreateNode = useCallback(() => {
+    refetchCustomNodes();
+    setIsOpen(false);
+    setCode("");
+    setEditingNodeId(null);
+  }, [refetchCustomNodes]);
+
+  const handleUpdateNode = useCallback(() => {
+    refetchCustomNodes();
+    setIsOpen(false);
+    setCode("");
+    setEditingNodeId(null);
+  }, [refetchCustomNodes]);
+
+  // Update addNode function with proper typing
+  const addNode = useCallback(
+    (type: string, name: string) => {
+      if (type === "custom") {
+        setIsOpen(true);
+        return;
+      }
+
+      const customNode = customNodes?.find((n) => n.id === type);
+      if (customNode) {
+        const nodeId =
+          "node-" +
+          Date.now() +
+          "-" +
+          Math.random().toString(36).substring(2, 9);
+        const newNode: FlowNode<NodeData> = {
+          id: nodeId,
+          type: "custom",
+          position: { x: 200, y: 200 },
+          data: {
+            label: name,
+            type: "custom",
+            config: {
+              inputs: {
+                value: null,
+                updatedAt: new Date(),
+              },
+              outputs: {
+                value: null,
+                updatedAt: new Date(),
+              },
+            },
+            metadata: {
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              category: customNode.metadata?.category || "custom",
+              tags: customNode.metadata?.tags || [],
+              description: customNode.description,
+            },
+          },
+        };
+
+        workflow.setNodes({ type: "add", node: newNode });
+
+        if (updateWorkflow) {
+          updateWorkflow.mutate(
+            {
+              projectId: projectId as string,
+              nodes: [...workflow.nodes, newNode],
+              edges: workflow.edges,
+            },
+            {
+              onSuccess: () => {
+                toast.success("Node added successfully");
+              },
+              onError: (error) => {
+                toast.error("Failed to save node");
+                console.error(error);
+              },
+            }
+          );
+        }
+        return;
+      }
+
+      // Handle built-in nodes
+      const nodeId =
+        "node-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9);
+      const newNode: FlowNode<NodeData> = {
+        id: nodeId,
+        type: type as NodeType,
+        position: { x: 200, y: 200 },
+        data: {
+          label: name,
+          type: type,
+          config: {
+            inputs: {
+              value: null,
+              updatedAt: new Date(),
+            },
+            outputs: {
+              value: null,
+              updatedAt: new Date(),
+            },
+          },
+          metadata: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            category: NODE_CATEGORIES[type]?.[0]?.category || "other",
+          },
+        },
+      };
+
+      workflow.setNodes({ type: "add", node: newNode });
+
+      if (updateWorkflow) {
+        updateWorkflow.mutate(
+          {
+            projectId: projectId as string,
+            nodes: [...workflow.nodes, newNode],
+            edges: workflow.edges,
+          },
+          {
+            onSuccess: () => {
+              toast.success("Node added successfully");
+            },
+            onError: (error) => {
+              toast.error("Failed to save node");
+              console.error(error);
+            },
+          }
+        );
+      }
+    },
+    [workflow, customNodes, projectId, updateWorkflow]
+  );
+
+  // Update the node categories to include custom nodes
+  const allNodes = useMemo(() => {
+    const builtInNodes = Object.entries(NODE_CATEGORIES).flatMap(
+      ([category, nodes]) => nodes.map((node) => ({ ...node, category }))
+    );
+
+    const customNodesList =
+      customNodes?.map((node: any) => ({
+        type: node.id,
+        name: node.name,
+        icon: node.metadata?.icon || "⚡",
+        category: node.metadata?.category || "custom",
+        description: node.description,
+        isCustom: true,
+        customNodeId: node.id,
+        config: node.config,
+        metadata: node.metadata,
+      })) || [];
+
+    // Group custom nodes by category
+    const customNodesByCategory = customNodesList.reduce<
+      Record<string, NodeWithCategory[]>
+    >((acc, node) => {
+      const category = node.category || "custom";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(node);
+      return acc;
+    }, {});
+
+    // Merge built-in and custom nodes
+    const mergedCategories = {
+      ...NODE_CATEGORIES,
+      ...customNodesByCategory,
+    };
+
+    return Object.entries(mergedCategories).flatMap(([category, nodes]) =>
+      (nodes as NodeWithCategory[]).map((node) => ({
+        ...node,
+        category,
+        type: node.isCustom ? node.type : node.type,
+      }))
+    );
+  }, [customNodes]);
+
+  // Memoize the filtered nodes
   const filteredNodes = useMemo(
     () =>
       searchQuery
@@ -584,51 +1052,7 @@ function CustomNode({ data }) {
     [searchQuery, allNodes]
   );
 
-  // Memoize the add node function
-  const addNode = useCallback(
-    (type: NodeType, name: string) => {
-      if (type === "custom") {
-        setIsOpen(true);
-        return;
-      }
-
-      const newNode = {
-        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type,
-        position: { x: 200, y: 200 },
-        data: {
-          label: name,
-          metadata: {
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        },
-      };
-      setNodes({ type: "add", node: newNode });
-    },
-    [setNodes]
-  );
-
-  // Memoize the custom node creation handler
-  const handleCustomNodeCreate = useCallback(() => {
-    const newNode = {
-      id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type: "custom",
-      position: { x: 200, y: 200 },
-      data: {
-        label: "Custom Node",
-        code: customCode,
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      },
-    };
-    setNodes({ type: "add", node: newNode });
-    setIsOpen(false);
-  }, [customCode, setNodes]);
-
-  // Memoize category toggle handler
+  // Memoize the category toggle handler
   const handleCategoryToggle = useCallback((category: string) => {
     setOpenCategory((prev) => (prev === category ? null : category));
   }, []);
@@ -645,6 +1069,9 @@ function CustomNode({ data }) {
       debouncedSetSearchQuery.cancel();
     };
   }, [debouncedSetSearchQuery]);
+
+  // Add a type for the categorized nodes
+  type CategorizedNodes = Record<string, NodeWithCategory[]>;
 
   return (
     <div className="top-2 right-4 ring-2 rounded-lg ring-zinc-300 h-full bg-white">
@@ -666,6 +1093,9 @@ function CustomNode({ data }) {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Add Create Custom Node button at the top */}
+        <CreateCustomNodeButton onClick={() => setIsOpen(true)} />
+
         {searchQuery ? (
           // Show filtered nodes directly when searching
           <div className="space-y-2">
@@ -685,7 +1115,22 @@ function CustomNode({ data }) {
           </div>
         ) : (
           // Show categorized nodes when not searching
-          Object.entries(NODE_CATEGORIES).map(([category, nodes]) => (
+          Object.entries(
+            (allNodes as NodeWithCategory[]).reduce(
+              (
+                acc: CategorizedNodes,
+                node: NodeWithCategory
+              ): CategorizedNodes => {
+                const category = node.category || "other";
+                if (!acc[category]) {
+                  acc[category] = [];
+                }
+                acc[category].push(node);
+                return acc;
+              },
+              {} as CategorizedNodes
+            )
+          ).map(([category, nodes]) => (
             <div key={category} className="space-y-2">
               <CategoryButton
                 category={category}
@@ -707,78 +1152,14 @@ function CustomNode({ data }) {
       <CustomNodeModal
         isOpen={isOpen}
         setIsOpen={setIsOpen}
-        code={customCode}
-        setCode={setCustomCode}
-        onCreate={handleCustomNodeCreate}
+        code={code}
+        setCode={setCode}
+        onCreate={handleCreateNode}
+        onUpdate={handleUpdateNode}
+        editingNodeId={editingNodeId || undefined}
       />
     </div>
   );
 });
 
 NodePalette.displayName = "NodePalette";
-
-export const CustomNodeModal = ({
-  isOpen,
-  setIsOpen,
-  code,
-  setCode,
-  onCreate,
-}: {
-  isOpen: boolean;
-  setIsOpen: React.Dispatch<boolean>;
-  code: string;
-  setCode: (code: string) => void;
-  onCreate: () => void;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-        onClick={() => setIsOpen(false)}
-      />
-
-      <div className="relative w-1/2 h-1/2 bg-white rounded-lg p-4 shadow-lg border border-gray-200">
-        <div className="w-full h-full bg-white rounded-lg p-4 flex flex-col">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Custom Node</h1>
-
-          <div className="flex-1 min-h-0 bg-white rounded-lg border border-gray-200">
-            <CodeEditor
-              initialValue={code}
-              onChange={setCode}
-              language="typescript"
-              height="100%"
-              className="h-full"
-              readOnly={false}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              onClick={() => setIsOpen(false)}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onCreate}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-            >
-              Create Node
-            </button>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setIsOpen(false)}
-          className="absolute top-2 right-2 bg-gray-100 text-gray-500 rounded-full p-2 
-            cursor-pointer hover:bg-gray-200 transition-colors"
-          aria-label="Close"
-        >
-          <X />
-        </button>
-      </div>
-    </div>
-  );
-};

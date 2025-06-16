@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Project, User } from "./generated/prisma";
 import { Edge, Node } from "@xyflow/react";
-import { prisma } from "./lib/db";
-import bcrypt from "bcryptjs";
 
 // API endpoints
 const API = {
@@ -68,10 +66,15 @@ export function useUpdateWorkflow() {
 // Query hooks
 export function useProject(projectId?: string) {
   if (projectId == undefined || projectId == null) {
-    return useQuery({
+    const query = useQuery({
       queryKey: ["projects"],
       queryFn: () => fetchAPI<Project[]>(API.projects.list()),
     });
+
+    // if (query) {
+    //   return redirect("/projects");
+    // }
+    return query;
   }
 
   return useQuery({
