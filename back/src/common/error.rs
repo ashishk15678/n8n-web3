@@ -32,6 +32,18 @@ pub enum AppError {
 
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    #[error("Invalid deployment state: {0}")]
+    InvalidDeploymentState(String),
+
+    #[error("Ethereum deployment error: {0}")]
+    EthereumDeploymentError(String),
+
+    #[error("Serialization error: {0}")]
+    SerializationError(#[from] serde_json::Error),
+
+    #[error("Other error: {0}")]
+    Other(String),
 }
 
 impl From<crossbeam_channel::SendError<()>> for AppError {

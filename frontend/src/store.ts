@@ -130,27 +130,35 @@ function initializeNodeData(data: Partial<NodeData> = {}): NodeData {
   };
 }
 
-// Update getNodeValue to use config
+// Update getNodeValue to handle connection states
 function getNodeValue(node: CustomNode): any {
   if (!node.data?.config) return null;
 
+  // Check if node is connected (has input)
+  const isConnected = node.data.config.inputs?.value !== null;
+
   switch (node.type) {
     case "sendtoken":
-      return (
-        node.data.config.inputs?.value ||
-        node.data.amount ||
-        node.data.tokenAddress ||
-        node.data.recipient
-      );
+      return {
+        value:
+          node.data.config.inputs?.value ||
+          node.data.amount ||
+          node.data.tokenAddress ||
+          node.data.recipient,
+        isConnected,
+      };
     case "inputtext":
     case "inputnumber":
     case "custom":
     default:
-      return node.data.config.inputs?.value;
+      return {
+        value: node.data.config.inputs?.value,
+        isConnected,
+      };
   }
 }
 
-// Update setNodeValue to handle config properly
+// Update setNodeValue to handle connection states and data flow
 function setNodeValue(node: CustomNode, value: any): CustomNode {
   const updatedNode = { ...node };
   const now = new Date();
@@ -160,14 +168,23 @@ function setNodeValue(node: CustomNode, value: any): CustomNode {
   }
 
   const baseConfig = {
-    inputs: { value: null, updatedAt: now },
-    outputs: { value: null, updatedAt: now },
+    inputs: {
+      value: null,
+      updatedAt: now,
+      isConnected: false,
+    },
+    outputs: {
+      value: null,
+      updatedAt: now,
+      isConnected: false,
+    },
   };
 
   if (!updatedNode.data.config) {
     updatedNode.data.config = baseConfig;
   }
 
+  // Handle different node types
   switch (node.type) {
     case "sendtoken":
       if (typeof value === "number") {
@@ -180,6 +197,13 @@ function setNodeValue(node: CustomNode, value: any): CustomNode {
               ...node.data.config.inputs,
               value,
               updatedAt: now,
+              isConnected: true,
+            },
+            outputs: {
+              ...node.data.config.outputs,
+              value,
+              updatedAt: now,
+              isConnected: true,
             },
           },
         };
@@ -194,6 +218,13 @@ function setNodeValue(node: CustomNode, value: any): CustomNode {
               ...node.data.config.inputs,
               value,
               updatedAt: now,
+              isConnected: true,
+            },
+            outputs: {
+              ...node.data.config.outputs,
+              value,
+              updatedAt: now,
+              isConnected: true,
             },
           },
         };
@@ -209,6 +240,13 @@ function setNodeValue(node: CustomNode, value: any): CustomNode {
             ...node.data.config.inputs,
             value,
             updatedAt: now,
+            isConnected: true,
+          },
+          outputs: {
+            ...node.data.config.outputs,
+            value,
+            updatedAt: now,
+            isConnected: true,
           },
         },
       };
@@ -266,6 +304,7 @@ export const workFlow = create<{
                 ...nodes[nodeIndex].data.metadata,
                 updatedAt: new Date(),
               },
+              return: {},
             },
           };
         }
@@ -354,10 +393,30 @@ export const workFlow = create<{
 
       // Handle immediate updates for clearing all edges
       if ("type" in edge && edge.type === "clear") {
-        // Reset values of all nodes that were connected
+        // Reset values and connection states of all nodes
         nodes.forEach((node, index) => {
           if (node.data?.config) {
-            nodes[index] = setNodeValue(node, null);
+            nodes[index] = {
+              ...node,
+              data: {
+                ...node.data,
+                config: {
+                  ...node.data.config,
+                  inputs: {
+                    ...node.data.config.inputs,
+                    value: null,
+                    updatedAt: new Date(),
+                    isConnected: false,
+                  },
+                  outputs: {
+                    ...node.data.config.outputs,
+                    value: null,
+                    updatedAt: new Date(),
+                    isConnected: false,
+                  },
+                },
+              },
+            };
           }
         });
         return { edges: [], nodes };
@@ -365,7 +424,7 @@ export const workFlow = create<{
 
       if ("type" in edge) {
         if (edge.type === "remove") {
-          // When removing an edge, reset the target node's value
+          // When removing an edge, reset the target node's value and connection state
           const edgeToRemove = edges.find((e) => e.id === edge.id);
           if (edgeToRemove) {
             const targetNodeIndex = nodes.findIndex(
@@ -373,10 +432,23 @@ export const workFlow = create<{
             );
             if (targetNodeIndex !== -1) {
               const targetNode = nodes[targetNodeIndex];
-              nodes[targetNodeIndex] = setNodeValue(targetNode, null);
+              nodes[targetNodeIndex] = {
+                ...targetNode,
+                data: {
+                  ...targetNode.data,
+                  config: {
+                    ...targetNode.data.config,
+                    inputs: {
+                      ...targetNode.data.config.inputs,
+                      value: null,
+                      updatedAt: new Date(),
+                      isConnected: false,
+                    },
+                  },
+                },
+              };
             }
           }
-
           return { edges: edges.filter((e) => e.id !== edge.id), nodes };
         }
       }
@@ -397,7 +469,22 @@ export const workFlow = create<{
         );
 
         if (targetNodeIndex !== -1) {
-          nodes[targetNodeIndex] = setNodeValue(targetNode, sourceValue);
+          // Update target node with source value and connection state
+          nodes[targetNodeIndex] = {
+            ...targetNode,
+            data: {
+              ...targetNode.data,
+              config: {
+                ...targetNode.data.config,
+                inputs: {
+                  ...targetNode.data.config.inputs,
+                  value: sourceValue.value,
+                  updatedAt: new Date(),
+                  isConnected: true,
+                },
+              },
+            },
+          };
         }
 
         const edgeType =
@@ -413,9 +500,9 @@ export const workFlow = create<{
           data: {
             type: edgeType,
             sourceType: sourceNode.type,
-            sourceValue: sourceValue,
+            sourceValue: sourceValue.value,
             targetType: targetNode.type,
-            value: sourceValue,
+            value: sourceValue.value,
             config: {
               inputs: { value: connection.source, updatedAt: new Date() },
               outputs: {

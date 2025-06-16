@@ -2,8 +2,8 @@
 
 import "@/app/globals.css";
 
-import { Navigate, useParams } from "react-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { Link, Navigate, useParams } from "react-router";
+import React, { useCallback, useEffect, useState, useMemo, memo } from "react";
 import { useProject, useUpdateWorkflow, useWorkflow } from "@/server-store";
 import {
   Background,
@@ -25,10 +25,22 @@ import {
 } from "@/app/components/react-flow/custom-comp";
 import { Project } from "@/generated/prisma";
 import { workFlow } from "@/store";
-import { Loader2, Plus, Save, Trash, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Menu,
+  Plus,
+  Save,
+  Trash,
+  X,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 import { CodeEditor } from "@/app/components/code-editor/CodeEditor";
 import { EnvModalButton } from "@/app/components/env";
 import EthTransaction from "@/app/components/react-flow/eth/transaction";
+import { cn } from "@/lib/utils";
+import { debounce } from "lodash";
 
 const nodeTypes = {
   sendtoken: SendToken,
@@ -46,6 +58,98 @@ const edgeTypes = {
   "custom-edge": CustomEdge,
   "ethTransaction-edge": CustomEdge,
 };
+
+// Define node types
+type NodeType =
+  | "sendtoken"
+  | "ethTransaction"
+  | "inputtext"
+  | "inputnumber"
+  | "custom";
+
+interface NodeDefinition {
+  type: NodeType;
+  name: string;
+  icon: string;
+}
+
+interface NodeWithCategory extends NodeDefinition {
+  category?: string;
+}
+
+// Memoize the node categories since they don't change
+const NODE_CATEGORIES: Record<string, NodeDefinition[]> = {
+  web3: [
+    { type: "sendtoken", name: "Send Token", icon: "→" },
+    { type: "ethTransaction", name: "Eth Transaction", icon: "↔" },
+  ],
+  inputs: [
+    { type: "inputtext", name: "Input Text", icon: "T" },
+    { type: "inputnumber", name: "Input Number", icon: "#" },
+  ],
+  custom: [{ type: "custom", name: "Custom Node", icon: "⚡" }],
+};
+
+// Memoized Node Button component
+const NodeButton = memo(
+  ({
+    node,
+    onAdd,
+    showCategory = false,
+  }: {
+    node: NodeWithCategory;
+    onAdd: (type: NodeType, name: string) => void;
+    showCategory?: boolean;
+  }) => (
+    <button
+      onClick={() => onAdd(node.type, node.name)}
+      className="w-full flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-50 text-zinc-600 
+      hover:bg-zinc-100 hover:text-zinc-900 transition-all duration-200 
+      cursor-pointer border border-zinc-200"
+    >
+      <span className="w-6 h-6 flex items-center justify-center text-zinc-400 bg-zinc-100 rounded">
+        {node.icon}
+      </span>
+      <span>{node.name}</span>
+      {showCategory && node.category && (
+        <span className="text-xs text-zinc-400 ml-auto capitalize">
+          {node.category}
+        </span>
+      )}
+      <Plus size={16} className="ml-auto text-zinc-400" />
+    </button>
+  )
+);
+
+NodeButton.displayName = "NodeButton";
+
+// Memoized Category Button component
+const CategoryButton = memo(
+  ({
+    category,
+    isOpen,
+    onToggle,
+  }: {
+    category: string;
+    isOpen: boolean;
+    onToggle: () => void;
+  }) => (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 rounded-lg transition-colors"
+    >
+      <span className="capitalize">{category}</span>
+      <ChevronDown
+        size={16}
+        className={`transform transition-transform text-zinc-400 ${
+          isOpen ? "rotate-180" : ""
+        }`}
+      />
+    </button>
+  )
+);
+
+CategoryButton.displayName = "CategoryButton";
 
 export function ProjectPageContent({ projectId }: { projectId: string }) {
   const { data: project } = useProject(projectId);
@@ -194,20 +298,40 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
     [setEdges]
   );
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   return (
     <div>
-      <div className="absolute top-2 left-4 w-full flex items-center justify-between gap-2">
-        <span className="font-bold text-2xl hover:underline">
-          {(project as Project)?.name}
-        </span>
+      {/* Top bar  */}
+      <div className="w-full flex items-center justify-between gap-2 p-4">
+        <div className="flex flex-row items-center gap-8">
+          <Link to="/projects">
+            <div className="flex flex-row items-center gap-2">
+              <ArrowLeft size={16} className="text-muted-foreground" />
+              <span className="text-muted-foreground text-sm">Projects</span>
+            </div>
+          </Link>
+          <div>
+            <span className="font-bold text-2xl hover:underline">
+              {(project as Project)?.name}
+            </span>
+            <EnvModalButton />
+          </div>{" "}
+        </div>
         <InputBox />
+        <div className="flex flex-row items-center gap-2">
+          <ClearButton />
+          <SaveButton />
+        </div>
         <div />
       </div>
+
+      {/* Main content  */}
       <div
-        style={{ height: "95vh", width: "100vw", marginTop: "5vh" }}
+        style={{ height: "100vh", width: "100vw" }}
         className="flex flex-row"
       >
-        <div className="w-3/4">
+        <div className="w-full">
           <ReactFlowProvider>
             <FlowProvider>
               <ReactFlow
@@ -235,13 +359,23 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
             </FlowProvider>
           </ReactFlowProvider>
         </div>
-        <div className="w-1/4">
+        <div className="absolute top-4 right-40">
+          <button
+            className="bg-white p-2 rounded-full"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
+            <Menu size={24} />
+          </button>
+        </div>
+        <div
+          className={cn(
+            "w-2/9 transition-all",
+            isSidebarOpen ? "w-2/9" : "w-0"
+          )}
+        >
           <NodePalette />
-          <SaveButton />
-          <ClearButton />
         </div>
       </div>
-      <EnvModalButton />
     </div>
   );
 }
@@ -280,7 +414,7 @@ export function ClearButton() {
   return (
     <button
       onClick={handleClear}
-      className="bg-red-100 text-red-600 px-2 py-0.5 rounded-lg absolute top-3 left-48 flex flex-row items-center gap-2 hover:bg-red-200 transition-colors duration-200"
+      className="bg-red-100 text-red-600 px-2 py-0.5 rounded-lg flex flex-row items-center gap-2 hover:bg-red-200 transition-colors duration-200"
     >
       Clear
       <Trash size={16} />
@@ -317,7 +451,7 @@ export function SaveButton() {
 
   return (
     <button
-      className={`bg-green-100 text-green-600 px-2 py-0.5 rounded-lg absolute top-2 flex flex-row items-center gap-2 ${
+      className={`bg-green-100 text-green-600 px-2 py-0.5 rounded-lg flex flex-row items-center gap-2 ${
         loading ? "animate-pulse cursor-not-allowed" : "cursor-pointer"
       }`}
       disabled={loading}
@@ -407,9 +541,11 @@ export function InputBox() {
   );
 }
 
-export function NodePalette() {
+export const NodePalette = memo(() => {
   const { setNodes } = workFlow();
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [customCode, setCustomCode] = useState<string>(`// Custom Node Component
 function CustomNode({ data }) {
   const { label, type, value, color = '#ff6b6b' } = data;
@@ -428,36 +564,53 @@ function CustomNode({ data }) {
   );
 }`);
 
-  const nodeTypes = [
-    { type: "sendtoken", name: "Send Token" },
-    { type: "inputtext", name: "Input Text" },
-    { type: "inputnumber", name: "Input Number" },
-    { type: "custom", name: "Custom Node" },
-    { type: "ethTransaction", name: "Eth Transaction" },
-  ];
+  // Memoize the flattened nodes array
+  const allNodes = useMemo(
+    () =>
+      Object.entries(NODE_CATEGORIES).flatMap(([category, nodes]) =>
+        nodes.map((node) => ({ ...node, category }))
+      ),
+    []
+  );
 
-  const addNode = (type: string, name: string) => {
-    if (type === "custom") {
-      setIsOpen(true);
-      return;
-    }
+  // Memoize filtered nodes
+  const filteredNodes = useMemo(
+    () =>
+      searchQuery
+        ? allNodes.filter((node) =>
+            node.name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : [],
+    [searchQuery, allNodes]
+  );
 
-    const newNode = {
-      id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      position: { x: 200, y: 200 },
-      data: {
-        label: name,
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
+  // Memoize the add node function
+  const addNode = useCallback(
+    (type: NodeType, name: string) => {
+      if (type === "custom") {
+        setIsOpen(true);
+        return;
+      }
+
+      const newNode = {
+        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type,
+        position: { x: 200, y: 200 },
+        data: {
+          label: name,
+          metadata: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         },
-      },
-    };
-    setNodes({ type: "add", node: newNode });
-  };
+      };
+      setNodes({ type: "add", node: newNode });
+    },
+    [setNodes]
+  );
 
-  const handleCustomNodeCreate = () => {
+  // Memoize the custom node creation handler
+  const handleCustomNodeCreate = useCallback(() => {
     const newNode = {
       id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: "custom",
@@ -473,23 +626,84 @@ function CustomNode({ data }) {
     };
     setNodes({ type: "add", node: newNode });
     setIsOpen(false);
-  };
+  }, [customCode, setNodes]);
+
+  // Memoize category toggle handler
+  const handleCategoryToggle = useCallback((category: string) => {
+    setOpenCategory((prev) => (prev === category ? null : category));
+  }, []);
+
+  // Debounced search handler
+  const debouncedSetSearchQuery = useMemo(
+    () => debounce((value: string) => setSearchQuery(value), 1500),
+    []
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSetSearchQuery.cancel();
+    };
+  }, [debouncedSetSearchQuery]);
 
   return (
-    <div className="top-2 right-4 ring-2 rounded-lg ring-zinc-300 h-full">
-      <span className="text-2xl font-bold w-full p-4">Nodes</span>
-      {nodeTypes.map((node) => (
-        <div key={node.type} className="p-4">
-          <button
-            className="ml-2 px-4 py-2 w-full rounded-full bg-zinc-100/40 ring ring-zinc-100 ring-2 text-zinc-500 
-              hover:text-orange-700 hover:bg-orange-100/80 hover:ring-orange-200 transition-all duration-200 
-              cursor-pointer flex flex-row items-center gap-2"
-            onClick={() => addNode(node.type, node.name)}
-          >
-            {node.name} <Plus size={16} />
-          </button>
+    <div className="top-2 right-4 ring-2 rounded-lg ring-zinc-300 h-full bg-white">
+      <div className="p-4 border-b border-zinc-200">
+        <span className="text-2xl font-bold">Nodes</span>
+        <div className="mt-4 relative">
+          <input
+            type="text"
+            placeholder="Search nodes..."
+            defaultValue={searchQuery}
+            onChange={(e) => debouncedSetSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-zinc-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
+          />
+          <Search
+            size={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400"
+          />
         </div>
-      ))}
+      </div>
+
+      <div className="p-4 space-y-4">
+        {searchQuery ? (
+          // Show filtered nodes directly when searching
+          <div className="space-y-2">
+            {filteredNodes.map((node) => (
+              <NodeButton
+                key={node.type}
+                node={node}
+                onAdd={addNode}
+                showCategory
+              />
+            ))}
+            {filteredNodes.length === 0 && (
+              <div className="text-center text-zinc-400 py-4">
+                No nodes found
+              </div>
+            )}
+          </div>
+        ) : (
+          // Show categorized nodes when not searching
+          Object.entries(NODE_CATEGORIES).map(([category, nodes]) => (
+            <div key={category} className="space-y-2">
+              <CategoryButton
+                category={category}
+                isOpen={openCategory === category}
+                onToggle={() => handleCategoryToggle(category)}
+              />
+              {openCategory === category && (
+                <div className="space-y-2 pl-4">
+                  {nodes.map((node) => (
+                    <NodeButton key={node.type} node={node} onAdd={addNode} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
       <CustomNodeModal
         isOpen={isOpen}
         setIsOpen={setIsOpen}
@@ -499,7 +713,9 @@ function CustomNode({ data }) {
       />
     </div>
   );
-}
+});
+
+NodePalette.displayName = "NodePalette";
 
 export const CustomNodeModal = ({
   isOpen,

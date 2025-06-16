@@ -18,6 +18,7 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
+  username  String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -28,7 +29,10 @@ model User {
   sessions      Session[]
   accounts      Account[]
   envs          Env[]
+  settings      Settings?
+  logs          Log[]
 
+  @@index([username])
   @@map("users")
 }
 
@@ -56,6 +60,10 @@ model Project {
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
+  logs   Log[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([userId])
   @@map("projects")
@@ -104,4 +112,61 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  type      LogType
+  level     LogLevel
+  message   String
+  metadata  Json?
+  project   Project? @relation(fields: [projectId], references: [id])
+  projectId String?
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([level])
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Settings {
+  id                 String   @id @default(cuid())
+  user               User     @relation(fields: [userId], references: [id])
+  userId             String   @unique
+  emailNotifications Boolean  @default(true)
+  avatar             String?
+  timezone           String   @default("Asia/Kolkata")
+  language           String   @default("en")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+enum LogType {
+  WORKFLOW_CREATED
+  WORKFLOW_UPDATED
+  WORKFLOW_DELETED
+  NODE_ADDED
+  NODE_REMOVED
+  NODE_UPDATED
+  EDGE_ADDED
+  EDGE_REMOVED
+  EDGE_UPDATED
+  EXECUTION_STARTED
+  EXECUTION_COMPLETED
+  EXECUTION_FAILED
+  SETTINGS_UPDATED
+  PROJECT_CREATED
+  PROJECT_DELETED
+  PROJECT_UPDATED
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+  DEBUG
 }
