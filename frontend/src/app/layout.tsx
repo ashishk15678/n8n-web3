@@ -9,6 +9,8 @@ import dynamic from "next/dynamic";
 import EnvModal from "./components/env";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/app/components/error-boundary/ErrorBoundary";
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({
   children,
@@ -43,6 +45,8 @@ export default function RootLayout({
           </WalletProviders>
         </ErrorBoundary>
       </body>
+      <GoogleAnalytics gaId="G-QY6VCLYSBH" />
+      <Analytics />
     </html>
   );
 }

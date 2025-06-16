@@ -595,10 +595,10 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
             edges={edges}
             onImport={handleImport}
           />
-          <InputBox />
-          <div className="flex flex-row items-center gap-2">
-            <ClearButton />
-            <SaveButton />
+        <InputBox />
+        <div className="flex flex-row items-center gap-2">
+          <ClearButton />
+          <SaveButton />
           </div>
         </div>
         <div />
@@ -639,7 +639,7 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
         </div>
         <div className="absolute top-4 right-40">
           <div className="flex flex-row items-center gap-2 outline outline-2 outline-zinc-200 rounded-full animate-pulse cursor-pointer">
-            <button
+          <button
               className={cn(
                 "bg-white p-2 rounded-full transition-all duration-300",
                 isSidebarOpen ? "rotate-270" : "rotate-0"
@@ -649,7 +649,7 @@ export function ProjectPageContent({ projectId }: { projectId: string }) {
               }}
             >
               <ArrowDownAz />
-            </button>
+          </button>
           </div>
         </div>
         <div
@@ -878,10 +878,10 @@ export const NodePalette = memo(function NodePalette() {
   // Update addNode function with proper typing
   const addNode = useCallback(
     (type: string, name: string) => {
-      if (type === "custom") {
-        setIsOpen(true);
-        return;
-      }
+    if (type === "custom") {
+      setIsOpen(true);
+      return;
+    }
 
       const customNode = customNodes?.find((n) => n.id === type);
       if (customNode) {
@@ -893,9 +893,9 @@ export const NodePalette = memo(function NodePalette() {
         const newNode: FlowNode<NodeData> = {
           id: nodeId,
           type: "custom",
-          position: { x: 200, y: 200 },
-          data: {
-            label: name,
+      position: { x: 200, y: 200 },
+      data: {
+        label: name,
             type: "custom",
             config: {
               inputs: {
@@ -907,9 +907,9 @@ export const NodePalette = memo(function NodePalette() {
                 updatedAt: new Date(),
               },
             },
-            metadata: {
-              createdAt: new Date(),
-              updatedAt: new Date(),
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
               category: customNode.metadata?.category || "custom",
               tags: customNode.metadata?.tags || [],
               description: customNode.description,
@@ -946,8 +946,8 @@ export const NodePalette = memo(function NodePalette() {
       const newNode: FlowNode<NodeData> = {
         id: nodeId,
         type: type as NodeType,
-        position: { x: 200, y: 200 },
-        data: {
+      position: { x: 200, y: 200 },
+      data: {
           label: name,
           type: type,
           config: {
@@ -960,9 +960,9 @@ export const NodePalette = memo(function NodePalette() {
               updatedAt: new Date(),
             },
           },
-          metadata: {
-            createdAt: new Date(),
-            updatedAt: new Date(),
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
             category: NODE_CATEGORIES[type]?.[0]?.category || "other",
           },
         },
@@ -1107,7 +1107,7 @@ export const NodePalette = memo(function NodePalette() {
             {filteredNodes.length === 0 && (
               <div className="text-center text-zinc-400 py-4">
                 No nodes found
-              </div>
+          </div>
             )}
           </div>
         ) : (
@@ -1139,9 +1139,9 @@ export const NodePalette = memo(function NodePalette() {
                   {nodes.map((node) => (
                     <NodeButton key={node.type} node={node} onAdd={addNode} />
                   ))}
-                </div>
+        </div>
               )}
-            </div>
+      </div>
           ))
         )}
       </div>
