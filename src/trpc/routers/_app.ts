@@ -1,6 +1,9 @@
 import prisma from "@/lib/db";
-import { baseProcedrue, createTrpcRouter } from "../init";
+import { baseProcedure, createTrpcRouter, protectedProcedure } from "../init";
 import { z } from "zod";
 export const AppRouter = createTrpcRouter({
-  getUsers: baseProcedrue.query(async () => await prisma.user.findMany()),
+  getUser: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.auth.user.id;
+    return await prisma.user.findMany({ where: { id: userId } });
+  }),
 });
