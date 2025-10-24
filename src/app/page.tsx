@@ -15,12 +15,17 @@ export default function Home() {
       },
     }),
   );
+  const testAi = useMutation(trpc.testai.mutationOptions());
 
   return (
     <div>
       <pre>{JSON.stringify(data, null, 2)}</pre>
       <Button onClick={() => create.mutate()} disabled={create.isPending}>
         Create
+      </Button>
+
+      <Button onClick={() => testAi.mutate()} disabled={testAi.isPending}>
+        Test AI
       </Button>
     </div>
   );
