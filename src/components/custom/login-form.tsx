@@ -24,6 +24,7 @@ import Link from "next/link";
 import { Separator } from "../ui/separator";
 import { authClient } from "@/auth-client";
 import { toast } from "sonner";
+import Image from "next/image";
 
 const loginSchema = z.object({
   email: z.email("Please enter valid email."),
@@ -70,11 +71,34 @@ export default function LoginForm() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="text-black">
               <div className="grid gap-6">
                 <div className="flex flex-col gap-2">
-                  <Button variant={"outline"} disabled={isPending}>
-                    Continue with Github
+                  <Button
+                    variant={"outline"}
+                    disabled={isPending}
+                    className="flex flex-row justify-between space-x-2"
+                  >
+                    Continue with Github{" "}
+                    <Image
+                      src={"/github.svg"}
+                      alt="github image"
+                      width={15}
+                      height={15}
+                      className="rounded-full "
+                    />
                   </Button>
-                  <Button variant={"outline"} disabled={isPending}>
+
+                  <Button
+                    variant={"outline"}
+                    disabled={isPending}
+                    className="flex flex-row justify-between space-x-2"
+                  >
                     Continue with Google
+                    <Image
+                      src={"/google.svg"}
+                      alt="github image"
+                      width={15}
+                      height={15}
+                      className="rounded-full "
+                    />
                   </Button>
                 </div>
                 <Separator />

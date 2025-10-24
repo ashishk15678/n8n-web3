@@ -1,0 +1,6 @@
+procs:
+  inngest:
+    cmd: ["npx", "inngest-cli@latest", "dev"]
+
+  next:
+    cmd: ["bun", "run", "dev"]
