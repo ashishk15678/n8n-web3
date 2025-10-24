@@ -23,6 +23,10 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/auth-client";
+import {
+  hasActiveSubscription,
+  useHasActiveSubscription,
+} from "@/features/subsciption/hooks/use-subscription";
 
 export default function AppSideBar() {
   const menuItems = [
@@ -50,6 +54,7 @@ export default function AppSideBar() {
 
   const router = useRouter();
   const pathname = usePathname();
+  const { isLoading, hasActiveSubscription } = useHasActiveSubscription();
 
   return (
     <Sidebar collapsible="icon">
@@ -94,30 +99,34 @@ export default function AppSideBar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            tooltip={"Upgrade to Pro"}
-            className="
+        {!hasActiveSubscription && !isLoading && (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={"Upgrade to Pro"}
+              className="
             gap-x-4 h-10 px-4"
-            onClick={() => {}}
-          >
-            <StarIcon className="h-4 w-4" />
-            <span>Upgrade to Pro</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-
+              onClick={() => {
+                authClient.checkout({ slug: "pro" });
+              }}
+            >
+              <StarIcon className="h-4 w-4" />
+              <span>Upgrade to Pro</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip={"Billing Portal"}
             className="
             gap-x-4 h-10 px-4"
-            onClick={() => {}}
+            onClick={() => {
+              authClient.customer.portal();
+            }}
           >
             <CreditCardIcon className="h-4 w-4" />
             <span>Billing Portal</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
-
         <SidebarMenuItem>
           <SidebarMenuButton
             tooltip={"Log out"}
