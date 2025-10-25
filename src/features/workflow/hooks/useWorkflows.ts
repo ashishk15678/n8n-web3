@@ -5,10 +5,13 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useWorkflowParams } from "./useWorkflowParams";
 
 export const useSuspenseWorkflows = () => {
   const trpc = useTRPC();
-  return useSuspenseQuery(trpc.workflows.getMany.queryOptions());
+  const [params] = useWorkflowParams();
+
+  return useSuspenseQuery(trpc.workflows.getMany.queryOptions(params));
 };
 
 export const useCreateWorkflow = () => {
