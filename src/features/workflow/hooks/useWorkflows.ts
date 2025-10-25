@@ -29,3 +29,22 @@ export const useCreateWorkflow = () => {
     }),
   );
 };
+
+export const useRemoveWorkflow = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation(
+    trpc.workflows.remove.mutationOptions({
+      onSuccess: (data: any) => {
+        toast.success(`Succesfully deleted the workflow : ${data.name}`);
+        queryClient.invalidateQueries(trpc.workflows.getMany.queryOptions({}));
+        queryClient.invalidateQueries(
+          trpc.workflows.getOne.queryFilter({ id: data.id }),
+        );
+      },
+      onError: (data: any) => {
+        toast.error(`Failed to create workflow : ${data.message}`);
+      },
+    }),
+  );
+};
