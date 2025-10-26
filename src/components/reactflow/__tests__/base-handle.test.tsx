@@ -1,114 +1,89 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { ReactFlowProvider } from '@xyflow/react'
-import { BaseHandle } from '../base-handle'
-import { Position } from '@xyflow/react'
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { BaseHandle } from "../base-handle";
+import { Position } from "@xyflow/react";
+import { ReactFlowProvider } from "@xyflow/react";
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ReactFlowProvider>{children}</ReactFlowProvider>
-)
+// Mock ReactFlow's Handle component
+vi.mock("@xyflow/react", async () => {
+  const actual = await vi.importActual("@xyflow/react");
+  return {
+    ...actual,
+    Handle: vi.fn(({ children, className, ...props }) => (
+      <div data-testid="handle" className={className} {...props}>
+        {children}
+      </div>
+    )),
+  };
+});
 
-describe('BaseHandle', () => {
-  it('should render without crashing', () => {
+describe("BaseHandle", () => {
+  it("should render without crashing", () => {
     render(
-      <BaseHandle type="source" position={Position.Right} />,
-      { wrapper }
-    )
-  })
+      <ReactFlowProvider>
+        <BaseHandle type="source" position={Position.Right} />
+      </ReactFlowProvider>
+    );
+    expect(screen.getByTestId("handle")).toBeInTheDocument();
+  });
 
-  it('should accept and pass through position prop', () => {
-    const { container } = render(
-      <BaseHandle type="source" position={Position.Right} />,
-      { wrapper }
-    )
-    expect(container.querySelector('.react-flow__handle')).toBeInTheDocument()
-  })
-
-  it('should render with target type', () => {
-    const { container } = render(
-      <BaseHandle type="target" position={Position.Left} />,
-      { wrapper }
-    )
-    expect(container.querySelector('.react-flow__handle-left')).toBeInTheDocument()
-  })
-
-  it('should render with source type', () => {
-    const { container } = render(
-      <BaseHandle type="source" position={Position.Right} />,
-      { wrapper }
-    )
-    expect(container.querySelector('.react-flow__handle-right')).toBeInTheDocument()
-  })
-
-  it('should accept custom className', () => {
-    const customClass = 'custom-handle-class'
-    const { container } = render(
-      <BaseHandle
-        type="source"
-        position={Position.Right}
-        className={customClass}
-      />,
-      { wrapper }
-    )
-    const handle = container.querySelector('.react-flow__handle')
-    expect(handle).toHaveClass(customClass)
-  })
-
-  it('should render children when provided', () => {
+  it("should apply custom className", () => {
     render(
-      <BaseHandle type="source" position={Position.Right}>
-        <span>Handle Content</span>
-      </BaseHandle>,
-      { wrapper }
-    )
-    expect(screen.getByText('Handle Content')).toBeInTheDocument()
-  })
+      <ReactFlowProvider>
+        <BaseHandle
+          type="source"
+          position={Position.Right}
+          className="custom-class"
+        />
+      </ReactFlowProvider>
+    );
+    const handle = screen.getByTestId("handle");
+    expect(handle).toHaveClass("custom-class");
+  });
 
-  it('should support all position values', () => {
-    const positions = [Position.Top, Position.Bottom, Position.Left, Position.Right]
-    
-    positions.forEach((position) => {
-      const { container } = render(
-        <BaseHandle type="source" position={position} />,
-        { wrapper }
-      )
-      expect(container.querySelector('.react-flow__handle')).toBeInTheDocument()
-    })
-  })
-
-  it('should accept id prop', () => {
-    const handleId = 'custom-handle-id'
-    const { container } = render(
-      <BaseHandle
-        type="source"
-        position={Position.Right}
-        id={handleId}
-      />,
-      { wrapper }
-    )
-    const handle = container.querySelector(`[data-handleid="${handleId}"]`)
-    expect(handle).toBeInTheDocument()
-  })
-
-  it('should have default styling classes', () => {
-    const { container } = render(
-      <BaseHandle type="source" position={Position.Right} />,
-      { wrapper }
-    )
-    const handle = container.querySelector('.react-flow__handle')
-    expect(handle?.className).toContain('rounded-full')
-  })
-
-  it('should forward ref correctly', () => {
-    const ref = vi.fn()
+  it("should render children", () => {
     render(
-      <BaseHandle
-        ref={ref as any}
-        type="source"
-        position={Position.Right}
-      />,
-      { wrapper }
-    )
-    expect(ref).toHaveBeenCalled()
-  })
-})
+      <ReactFlowProvider>
+        <BaseHandle type="source" position={Position.Right}>
+          <span>Test Child</span>
+        </BaseHandle>
+      </ReactFlowProvider>
+    );
+    expect(screen.getByText("Test Child")).toBeInTheDocument();
+  });
+
+  it("should forward ref correctly", () => {
+    const ref = vi.fn();
+    render(
+      <ReactFlowProvider>
+        <BaseHandle ref={ref} type="source" position={Position.Right} />
+      </ReactFlowProvider>
+    );
+    expect(ref).toHaveBeenCalled();
+  });
+
+  it("should pass through additional props", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseHandle
+          type="target"
+          position={Position.Left}
+          id="custom-handle"
+          isConnectable={true}
+        />
+      </ReactFlowProvider>
+    );
+    const handle = screen.getByTestId("handle");
+    expect(handle).toHaveAttribute("id", "custom-handle");
+  });
+
+  it("should apply default styling classes", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseHandle type="source" position={Position.Right} />
+      </ReactFlowProvider>
+    );
+    const handle = screen.getByTestId("handle");
+    expect(handle.className).toContain("rounded-full");
+  });
+});

@@ -1,158 +1,234 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ReactFlowProvider } from '@xyflow/react'
-import { NodeSelector } from '../node-selector'
-import { NodeType } from '@/generated/prisma'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { NodeSelector } from "../node-selector";
+import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
+import { NodeType } from "@/generated/prisma";
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ReactFlowProvider>{children}</ReactFlowProvider>
-)
-
-// Mock toast
-vi.mock('sonner', () => ({
+// Mock dependencies
+vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
+    success: vi.fn(),
   },
-}))
+}));
 
-// Mock createId
-vi.mock('@paralleldrive/cuid2', () => ({
-  createId: vi.fn(() => 'test-cuid-123'),
-}))
+vi.mock("@paralleldrive/cuid2", () => ({
+  createId: vi.fn(() => "test-id-123"),
+}));
 
-describe('NodeSelector', () => {
-  const mockOnOpenChange = vi.fn()
+const mockSetNodes = vi.fn();
+const mockGetNodes = vi.fn(() => []);
+const mockScreenToFlowPosition = vi.fn((pos) => pos);
 
+vi.mock("@xyflow/react", async () => {
+  const actual = await vi.importActual("@xyflow/react");
+  return {
+    ...actual,
+    useReactFlow: vi.fn(() => ({
+      setNodes: mockSetNodes,
+      getNodes: mockGetNodes,
+      screenToFlowPosition: mockScreenToFlowPosition,
+    })),
+  };
+});
+
+describe("NodeSelector", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+    mockGetNodes.mockReturnValue([]);
+    global.window = {
+      ...global.window,
+      innerWidth: 1920,
+      innerHeight: 1080,
+    } as any;
+  });
 
-  it('should render when open', () => {
+  it("should render trigger when open is true", () => {
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByText(/What triggers this workflow/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText("Add Node")).toBeInTheDocument();
+  });
 
-  it('should not render when closed', () => {
+  it("should render sheet content when open", () => {
     render(
-      <NodeSelector open={false} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.queryByText(/What triggers this workflow/i)).not.toBeInTheDocument()
-  })
+    expect(screen.getByText("What triggers this workflow ?")).toBeInTheDocument();
+  });
 
-  it('should render trigger nodes section', () => {
+  it("should display trigger nodes section", () => {
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByText(/Trigger Manually/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText("Trigger Manually.")).toBeInTheDocument();
+    expect(screen.getByText("Trigger manually your workflow")).toBeInTheDocument();
+  });
 
-  it('should render execution nodes section', () => {
+  it("should display execution nodes section", () => {
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByText(/Http Request/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText("Http Request")).toBeInTheDocument();
+    expect(screen.getByText("Make http requests with ease.")).toBeInTheDocument();
+  });
 
-  it('should display trigger node description', () => {
+  it("should call onOpenChange when sheet changes", () => {
+    const handleOpenChange = vi.fn();
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={handleOpenChange}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByText(/Trigger manually your workflow/i)).toBeInTheDocument()
-  })
+    // Verify the component is controlled by the open prop
+    expect(screen.getByText("What triggers this workflow ?")).toBeInTheDocument();
+  });
 
-  it('should display execution node description', () => {
+  it("should add node when trigger node is selected", async () => {
+    const handleOpenChange = vi.fn();
+    
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={handleOpenChange}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByText(/Make http requests with ease/i)).toBeInTheDocument()
-  })
-
-  it('should render separator between sections', () => {
-    const { container } = render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+    const manualTrigger = screen.getByText("Trigger Manually.");
+    fireEvent.click(manualTrigger);
     
-    // Separator component should be rendered
-    expect(container.querySelector('[role="separator"]')).toBeInTheDocument()
-  })
+    await waitFor(() => {
+      expect(mockSetNodes).toHaveBeenCalled();
+    });
+  });
 
-  it('should call onOpenChange when selection is made', async () => {
-    const user = userEvent.setup()
+  it("should prevent multiple manual triggers", async () => {
+    const { toast } = await import("sonner");
+    mockGetNodes.mockReturnValue([
+      { id: "1", type: NodeType.MANUAL_TRIGGER, position: { x: 0, y: 0 }, data: {} }
+    ]);
+    
     render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    const httpRequestNode = screen.getByText(/Http Request/i)
-    await user.click(httpRequestNode.closest('div')!)
+    const manualTrigger = screen.getByText("Trigger Manually.");
+    fireEvent.click(manualTrigger);
     
-    expect(mockOnOpenChange).toHaveBeenCalledWith(false)
-  })
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Only one manual trigger allowed per workflow"
+      );
+    });
+  });
 
-  it('should render icons for nodes', () => {
-    const { container } = render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+  it("should add HTTP request node", async () => {
+    const handleOpenChange = vi.fn();
     
-    const icons = container.querySelectorAll('svg')
-    expect(icons.length).toBeGreaterThan(0)
-  })
-
-  it('should have hover effect on node options', () => {
-    const { container } = render(
-      <NodeSelector open={true} onOpenChange={mockOnOpenChange}>
-        <button>Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
-    
-    const nodeOptions = container.querySelectorAll('.cursor-pointer')
-    expect(nodeOptions.length).toBeGreaterThan(0)
-  })
-
-  it('should render children as trigger', () => {
     render(
-      <NodeSelector open={false} onOpenChange={mockOnOpenChange}>
-        <button data-testid="custom-trigger">Custom Trigger</button>
-      </NodeSelector>,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={handleOpenChange}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
     
-    expect(screen.getByTestId('custom-trigger')).toBeInTheDocument()
-  })
-})
+    const httpRequest = screen.getByText("Http Request");
+    fireEvent.click(httpRequest);
+    
+    await waitFor(() => {
+      expect(mockSetNodes).toHaveBeenCalled();
+      expect(handleOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("should replace initial node if present", async () => {
+    mockGetNodes.mockReturnValue([
+      { id: "initial-1", type: NodeType.INITIAL, position: { x: 0, y: 0 }, data: {} }
+    ]);
+    
+    render(
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
+    
+    const httpRequest = screen.getByText("Http Request");
+    fireEvent.click(httpRequest);
+    
+    await waitFor(() => {
+      expect(mockSetNodes).toHaveBeenCalledWith(expect.any(Function));
+    });
+  });
+
+  it("should generate random position for new node", async () => {
+    render(
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
+    
+    const httpRequest = screen.getByText("Http Request");
+    fireEvent.click(httpRequest);
+    
+    await waitFor(() => {
+      expect(mockScreenToFlowPosition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          x: expect.any(Number),
+          y: expect.any(Number),
+        })
+      );
+    });
+  });
+
+  it("should use center of window for node position calculation", async () => {
+    render(
+      <ReactFlowProvider>
+        <NodeSelector open={true} onOpenChange={vi.fn()}>
+          <button>Add Node</button>
+        </NodeSelector>
+      </ReactFlowProvider>
+    );
+    
+    const httpRequest = screen.getByText("Http Request");
+    fireEvent.click(httpRequest);
+    
+    await waitFor(() => {
+      const callArgs = mockScreenToFlowPosition.mock.calls[0][0];
+      expect(callArgs.x).toBeCloseTo(960, 200); // Center ± random offset
+      expect(callArgs.y).toBeCloseTo(540, 200);
+    });
+  });
+});

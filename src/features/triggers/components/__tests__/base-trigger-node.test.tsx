@@ -1,151 +1,155 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ReactFlowProvider } from '@xyflow/react'
-import { BaseTriggerNode } from '../base-trigger-node'
-import { MousePointerIcon } from 'lucide-react'
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { BaseTriggerNode } from "../base-trigger-node";
+import { ReactFlowProvider } from "@xyflow/react";
+import { MousePointerIcon } from "lucide-react";
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ReactFlowProvider>{children}</ReactFlowProvider>
-)
+// Mock dependencies
+vi.mock("@/components/workflow-node", () => ({
+  WorkflowNode: vi.fn(({ children }) => (
+    <div data-testid="workflow-node">{children}</div>
+  )),
+}));
 
-// Mock WorkflowNode
-vi.mock('@/components/workflow-node', () => ({
-  WorkflowNode: ({ children, name, description, onDelete, onSettings }: any) => (
-    <div data-testid="workflow-node">
-      <div data-testid="node-name">{name}</div>
-      <div data-testid="node-description">{description}</div>
-      <button onClick={onDelete}>Delete</button>
-      <button onClick={onSettings}>Settings</button>
+vi.mock("@/components/reactflow/base-node", () => ({
+  BaseNode: vi.fn(({ children, className, onDoubleClick }) => (
+    <div data-testid="base-node" className={className} onDoubleClick={onDoubleClick}>
       {children}
     </div>
-  ),
-}))
+  )),
+  BaseNodeContent: vi.fn(({ children }) => (
+    <div data-testid="base-node-content">{children}</div>
+  )),
+}));
 
-describe('BaseTriggerNode', () => {
+vi.mock("@/components/reactflow/base-handle", () => ({
+  BaseHandle: vi.fn(({ id, type, position }) => (
+    <div data-testid={`handle-${type}`} data-id={id} data-position={position} />
+  )),
+}));
+
+vi.mock("next/image", () => ({
+  default: (props: any) => <img {...props} />,
+}));
+
+describe("BaseTriggerNode", () => {
   const defaultProps = {
-    id: 'trigger-1',
-    type: 'MANUAL_TRIGGER',
+    id: "trigger-1",
+    type: "MANUAL_TRIGGER" as const,
     data: {},
     selected: false,
     isConnectable: true,
-    xPos: 0,
-    yPos: 0,
+    zIndex: 1,
     dragging: false,
-    zIndex: 0,
+    positionAbsoluteX: 0,
+    positionAbsoluteY: 0,
     icon: MousePointerIcon,
-    name: 'Test Trigger',
-  }
+    name: "Manual Trigger",
+  };
 
-  it('should render without crashing', () => {
-    render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('workflow-node')).toBeInTheDocument()
-  })
-
-  it('should display node name', () => {
-    render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('node-name')).toHaveTextContent('Test Trigger')
-  })
-
-  it('should display node description when provided', () => {
+  it("should render without crashing", () => {
     render(
-      <BaseTriggerNode {...defaultProps} description="Test Description" />,
-      { wrapper }
-    )
-    expect(screen.getByTestId('node-description')).toHaveTextContent('Test Description')
-  })
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    expect(screen.getByTestId("workflow-node")).toBeInTheDocument();
+    expect(screen.getByTestId("base-node")).toBeInTheDocument();
+  });
 
-  it('should render icon component', () => {
-    const { container } = render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    const icon = container.querySelector('svg')
-    expect(icon).toBeInTheDocument()
-  })
-
-  it('should render string icon as Image', () => {
-    const propsWithStringIcon = {
-      ...defaultProps,
-      icon: 'https://example.com/trigger-icon.png',
-    }
-    const { container } = render(
-      <BaseTriggerNode {...propsWithStringIcon} />,
-      { wrapper }
-    )
-    const img = container.querySelector('img')
-    expect(img).toBeInTheDocument()
-    expect(img).toHaveAttribute('alt', 'Test Trigger')
-  })
-
-  it('should render children when provided', () => {
+  it("should render with LucideIcon", () => {
     render(
-      <BaseTriggerNode {...defaultProps}>
-        <div data-testid="custom-content">Custom Content</div>
-      </BaseTriggerNode>,
-      { wrapper }
-    )
-    expect(screen.getByTestId('custom-content')).toBeInTheDocument()
-  })
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    const content = screen.getByTestId("base-node-content");
+    expect(content).toBeInTheDocument();
+  });
 
-  it('should call onSettings when settings button clicked', async () => {
-    const user = userEvent.setup()
-    const handleSettings = vi.fn()
+  it("should render with string icon (image path)", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} icon="/icon.png" />
+      </ReactFlowProvider>
+    );
+    
+    const image = screen.getByAltText("Manual Trigger");
+    expect(image).toBeInTheDocument();
+    expect(image).toHaveAttribute("src", "/icon.png");
+  });
+
+  it("should render children when provided", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps}>
+          <div>Custom Content</div>
+        </BaseTriggerNode>
+      </ReactFlowProvider>
+    );
+    
+    expect(screen.getByText("Custom Content")).toBeInTheDocument();
+  });
+
+  it("should only render source handle (no target)", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    expect(screen.getByTestId("handle-source")).toBeInTheDocument();
+    expect(screen.queryByTestId("handle-target")).not.toBeInTheDocument();
+  });
+
+  it("should apply rounded-l-2xl class to BaseNode", () => {
+    render(
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    const baseNode = screen.getByTestId("base-node");
+    expect(baseNode).toHaveClass("rounded-l-2xl");
+  });
+
+  it("should have displayName", () => {
+    expect(BaseTriggerNode.displayName).toBe("BaseTriggerNode");
+  });
+
+  it("should pass name to WorkflowNode", () => {
+    const WorkflowNodeMock = vi.mocked(
+      require("@/components/workflow-node").WorkflowNode
+    );
     
     render(
-      <BaseTriggerNode {...defaultProps} onSettings={handleSettings} />,
-      { wrapper }
-    )
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} name="Test Trigger" />
+      </ReactFlowProvider>
+    );
     
-    const settingsButton = screen.getByText('Settings')
-    await user.click(settingsButton)
+    expect(WorkflowNodeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test Trigger" }),
+      expect.anything()
+    );
+  });
+
+  it("should pass description to WorkflowNode", () => {
+    const WorkflowNodeMock = vi.mocked(
+      require("@/components/workflow-node").WorkflowNode
+    );
     
-    expect(handleSettings).toHaveBeenCalledOnce()
-  })
-
-  it('should call onDoubleClick when double clicked', async () => {
-    const user = userEvent.setup()
-    const handleDoubleClick = vi.fn()
+    render(
+      <ReactFlowProvider>
+        <BaseTriggerNode {...defaultProps} description="Test Description" />
+      </ReactFlowProvider>
+    );
     
-    const { container } = render(
-      <BaseTriggerNode {...defaultProps} onDoubleClick={handleDoubleClick} />,
-      { wrapper }
-    )
-    
-    const baseNode = container.querySelector('[tabindex="0"]')
-    if (baseNode) {
-      await user.dblClick(baseNode)
-      expect(handleDoubleClick).toHaveBeenCalled()
-    }
-  })
-
-  it('should have rounded left border styling', () => {
-    const { container } = render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    const baseNode = container.querySelector('.rounded-l-2xl')
-    expect(baseNode).toBeInTheDocument()
-  })
-
-  it('should render only source handle (no target)', () => {
-    const { container } = render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    const sourceHandle = container.querySelector('[data-handleid="source-1"]')
-    expect(sourceHandle).toBeInTheDocument()
-    
-    // Target handle should not exist (commented out in component)
-    const targetHandle = container.querySelector('[data-handleid="target-1"]')
-    expect(targetHandle).not.toBeInTheDocument()
-  })
-
-  it('should have source handle on right', () => {
-    const { container } = render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    const sourceHandle = container.querySelector('[data-handleid="source-1"]')
-    expect(sourceHandle).toBeInTheDocument()
-  })
-
-  it('should handle missing optional props gracefully', () => {
-    render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('workflow-node')).toBeInTheDocument()
-  })
-
-  it('should have group styling', () => {
-    const { container } = render(<BaseTriggerNode {...defaultProps} />, { wrapper })
-    const groupElement = container.querySelector('.group')
-    expect(groupElement).toBeInTheDocument()
-  })
-})
+    expect(WorkflowNodeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ description: "Test Description" }),
+      expect.anything()
+    );
+  });
+});

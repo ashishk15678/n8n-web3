@@ -1,94 +1,84 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { ReactFlowProvider } from '@xyflow/react'
-import { ManualTriggerNode } from '../manual-trigger-node'
-
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ReactFlowProvider>{children}</ReactFlowProvider>
-)
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { ManualTriggerNode } from "../manual-trigger-node";
+import { ReactFlowProvider } from "@xyflow/react";
 
 // Mock BaseTriggerNode
-vi.mock('../../base-trigger-node', () => ({
-  BaseTriggerNode: ({ name, description, icon: Icon, ...props }: any) => (
-    <div data-testid="base-trigger-node">
-      <div data-testid="node-name">{name}</div>
-      <div data-testid="node-description">{description}</div>
-      <Icon data-testid="node-icon" />
+vi.mock("../../base-trigger-node", () => ({
+  BaseTriggerNode: vi.fn((props) => (
+    <div data-testid="base-trigger-node" data-name={props.name} data-description={props.description}>
+      Base Trigger Node
     </div>
-  ),
-}))
+  )),
+}));
 
-describe('ManualTriggerNode', () => {
+describe("ManualTriggerNode", () => {
   const defaultProps = {
-    id: 'manual-trigger-1',
-    type: 'MANUAL_TRIGGER',
+    id: "manual-1",
+    type: "MANUAL_TRIGGER" as const,
     data: {},
     selected: false,
     isConnectable: true,
-    xPos: 0,
-    yPos: 0,
+    zIndex: 1,
     dragging: false,
-    zIndex: 0,
-  }
+    positionAbsoluteX: 0,
+    positionAbsoluteY: 0,
+  };
 
-  it('should render without crashing', () => {
-    render(<ManualTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('base-trigger-node')).toBeInTheDocument()
-  })
+  it("should render without crashing", () => {
+    render(
+      <ReactFlowProvider>
+        <ManualTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    expect(screen.getByTestId("base-trigger-node")).toBeInTheDocument();
+  });
 
-  it('should display "Execute Workflow" as name', () => {
-    render(<ManualTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('node-name')).toHaveTextContent('Execute Workflow')
-  })
+  it("should render with correct name", () => {
+    render(
+      <ReactFlowProvider>
+        <ManualTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    const node = screen.getByTestId("base-trigger-node");
+    expect(node).toHaveAttribute("data-name", "Execute Workflow");
+  });
 
-  it('should display correct description', () => {
-    render(<ManualTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('node-description')).toHaveTextContent("When clicking 'Execute Workflow'")
-  })
+  it("should render with correct description", () => {
+    render(
+      <ReactFlowProvider>
+        <ManualTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    const node = screen.getByTestId("base-trigger-node");
+    expect(node).toHaveAttribute("data-description", "When clicking 'Execute Workflow'");
+  });
 
-  it('should render MousePointerIcon', () => {
-    render(<ManualTriggerNode {...defaultProps} />, { wrapper })
-    expect(screen.getByTestId('node-icon')).toBeInTheDocument()
-  })
+  it("should use MousePointerIcon", () => {
+    const BaseTriggerNodeMock = vi.mocked(
+      require("../../base-trigger-node").BaseTriggerNode
+    );
+    
+    render(
+      <ReactFlowProvider>
+        <ManualTriggerNode {...defaultProps} />
+      </ReactFlowProvider>
+    );
+    
+    expect(BaseTriggerNodeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        icon: expect.any(Function),
+      }),
+      expect.anything()
+    );
+  });
 
-  it('should be memoized', () => {
-    const { rerender } = render(<ManualTriggerNode {...defaultProps} />, { wrapper })
-    rerender(<ManualTriggerNode {...defaultProps} />)
-    // Component should not re-render unnecessarily due to memo
-  })
-
-  it('should pass node id to BaseTriggerNode', () => {
-    const customId = 'custom-trigger-id'
-    const props = { ...defaultProps, id: customId }
-    render(<ManualTriggerNode {...props} />, { wrapper })
-    expect(screen.getByTestId('base-trigger-node')).toBeInTheDocument()
-  })
-
-  it('should handle different node positions', () => {
-    const props = {
-      ...defaultProps,
-      xPos: 100,
-      yPos: 200,
-    }
-    render(<ManualTriggerNode {...props} />, { wrapper })
-    expect(screen.getByTestId('base-trigger-node')).toBeInTheDocument()
-  })
-
-  it('should handle selected state', () => {
-    const props = {
-      ...defaultProps,
-      selected: true,
-    }
-    render(<ManualTriggerNode {...props} />, { wrapper })
-    expect(screen.getByTestId('base-trigger-node')).toBeInTheDocument()
-  })
-
-  it('should handle dragging state', () => {
-    const props = {
-      ...defaultProps,
-      dragging: true,
-    }
-    render(<ManualTriggerNode {...props} />, { wrapper })
-    expect(screen.getByTestId('base-trigger-node')).toBeInTheDocument()
-  })
-})
+  it("should be memoized", () => {
+    // ManualTriggerNode is wrapped in memo
+    expect(ManualTriggerNode).toBeDefined();
+    expect(typeof ManualTriggerNode).toBe("object");
+  });
+});
