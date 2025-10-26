@@ -6,11 +6,18 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
-    setupFiles: ["./test/setup.ts"],
     globals: true,
+    setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
+      exclude: [
+        "node_modules/",
+        "src/test/",
+        "**/*.config.*",
+        "**/generated/**",
+        "**/*.d.ts",
+      ],
     },
   },
   resolve: {
