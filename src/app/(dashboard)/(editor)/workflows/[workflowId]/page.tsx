@@ -23,9 +23,9 @@ export default async function Page({
         <ErrorBoundary fallback={<EditorError />}>
           <Suspense fallback={<EditorLoading />}>
             <EditorHeader workflowId={workflowId} />
-            <main className="flex flex-1">
+            <div className="size-full h-screen">
               <Editor workflowId={workflowId} />
-            </main>
+            </div>
           </Suspense>
         </ErrorBoundary>
       </HydrateClient>

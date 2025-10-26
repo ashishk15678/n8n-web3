@@ -1,0 +1,9 @@
+import { InitalNode } from "@/components/inital-node";
+import { NodeType } from "@/generated/prisma";
+import type { NodeTypes } from "@xyflow/react";
+
+export const nodeComponents = {
+  [NodeType.INITIAL]: InitalNode,
+} as const satisfies NodeTypes;
+
+export type RegisteredNodeType = keyof typeof nodeComponents;

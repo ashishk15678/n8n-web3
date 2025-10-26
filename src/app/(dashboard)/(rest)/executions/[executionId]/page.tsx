@@ -1,3 +1,5 @@
+import { requireAuth } from "@/auth-utils";
+
 export default async function Page({
   params,
 }: {
