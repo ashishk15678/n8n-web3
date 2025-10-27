@@ -16,6 +16,7 @@ import {
 } from "@/features/workflow/components/entity-components";
 import {
   useSuspenseWorkflow,
+  useUpdateWorkflow,
   useUpdateWorkflowName,
 } from "@/features/workflow/hooks/useWorkflows";
 import { SaveIcon } from "lucide-react";
@@ -39,6 +40,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { nodeComponents } from "@/config/node-components";
 import { AddNodeButton } from "./add-node-button";
+import { useAtomValue, useSetAtom } from "jotai";
+import { editorAtom } from "../store/atom";
+import { toast } from "sonner";
 
 export const EditorLoading = () => <LoadingView message="Loading Editor..." />;
 
@@ -46,6 +50,8 @@ export const EditorError = () => <ErrorView message="Error loading editor." />;
 
 export const Editor = ({ workflowId }: { workflowId: string }) => {
   const { data: workflow } = useSuspenseWorkflow(workflowId);
+
+  const setEditor = useSetAtom(editorAtom);
 
   const [nodes, setNodes] = useState<Node[]>(workflow.nodes);
   const [edges, setEdges] = useState<Edge[]>(workflow.edges);
@@ -75,7 +81,13 @@ export const Editor = ({ workflowId }: { workflowId: string }) => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeComponents}
+        onInit={setEditor}
         fitView
+        snapGrid={[10, 10]}
+        snapToGrid
+        panOnScroll
+        selectionOnDrag
+        panOnDrag={false}
       >
         <Background />
         <Controls />
@@ -103,10 +115,31 @@ export const EditorHeader = ({ workflowId }: { workflowId: string }) => {
 };
 
 export const EditorSaveButton = ({ workflowId }: { workflowId: string }) => {
+  const editor = useAtomValue(editorAtom);
+  const saveWorkflow = useUpdateWorkflow();
+  const handleSave = () => {
+    if (!editor) {
+      toast.error("Cannot update editor");
+      return;
+    }
+    const nodes = editor.getNodes();
+    const edges = editor.getEdges();
+
+    saveWorkflow.mutate({
+      id: workflowId,
+      nodes,
+      edges,
+    });
+  };
+
   return (
     <>
       <div className="ml-auto">
-        <Button onClick={() => {}} disabled={false} size="sm">
+        <Button
+          onClick={handleSave}
+          disabled={saveWorkflow.isPending}
+          size="sm"
+        >
           <SaveIcon className="size-4" />
           Save
         </Button>
