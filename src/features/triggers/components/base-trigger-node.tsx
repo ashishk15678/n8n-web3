@@ -8,9 +8,11 @@ import {
 } from "@/components/reactflow/node-status-indicator";
 import { WorkflowNode } from "@/components/workflow-node";
 import { type NodeProps, Position, useReactFlow } from "@xyflow/react";
-import { type LucideIcon } from "lucide-react";
+import { WandSparklesIcon, ZapIcon, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode } from "react";
+import { emitToConnected } from "@/features/workflow/trigger-bus";
+import { toast } from "sonner";
 
 interface BaseTriggerNodeProps extends NodeProps {
   icon: LucideIcon | string;
@@ -20,6 +22,7 @@ interface BaseTriggerNodeProps extends NodeProps {
   status?: NodeStatus;
   onSettings?: () => void;
   onDoubleClick?: () => void;
+  onTrigger: () => void;
 }
 
 export const BaseTriggerNode = ({
@@ -31,14 +34,51 @@ export const BaseTriggerNode = ({
   children,
   onDoubleClick,
   onSettings,
+  onTrigger,
 }: BaseTriggerNodeProps) => {
-  const { setNodes, setEdges } = useReactFlow();
+  const { setNodes, setEdges, getNode, getEdges } = useReactFlow();
   const handleDelete = () => {
     setNodes((currentNode) => currentNode.filter((node) => node.id !== id));
     setEdges((currentEdges) =>
       currentEdges.filter((edge) => edge.source !== id && edge.target !== id),
     );
   };
+
+  const node = getNode(id);
+
+  if (!node) toast.error("Some nodes are undefined.");
+  if (node && node.data.status) {
+    setNodes((node) =>
+      node.map((n) => {
+        if (n.id == id) return { ...n, data: { ...n.data, status: "initial" } };
+        return n;
+      }),
+    );
+  }
+
+  const handleTrigger = () => {
+    setNodes((node) =>
+      node.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, status: "loading" } } : n,
+      ),
+    );
+    try {
+      onTrigger?.();
+      emitToConnected(id, { data: undefined, error: undefined }, { getEdges });
+      setNodes((node) =>
+        node.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, status: "success" } } : n,
+        ),
+      );
+    } catch (e) {
+      setNodes((node) =>
+        node.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, status: "error" } } : n,
+        ),
+      );
+    }
+  };
+
   return (
     <WorkflowNode
       name={name}
@@ -51,6 +91,12 @@ export const BaseTriggerNode = ({
         variant="border"
         className="rounded-l-2xl"
       >
+        <button
+          onClick={handleTrigger}
+          className="bg-primary/10 absolute -right-2 p-1 rounded-r-full hover:translate-x-2 transition-all"
+        >
+          <ZapIcon className="stroke-1 size-2 " />{" "}
+        </button>
         <BaseNode
           status={status}
           onDoubleClick={onDoubleClick}

@@ -9,16 +9,17 @@ datasource db {
 }
 
 model User {
-  id            String     @id
+  id            String       @id
   name          String
   email         String
-  emailVerified Boolean    @default(false)
+  emailVerified Boolean      @default(false)
   image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @default(now()) @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @default(now()) @updatedAt
   sessions      Session[]
   accounts      Account[]
   Workflow      Workflow[]
+  Credential    Credential[]
 
   @@unique([email])
   @@map("user")
@@ -84,8 +85,26 @@ model Workflow {
 
 enum NodeType {
   INITIAL
+
+  // triggers
   MANUAL_TRIGGER
+  TIMED_TRIGGER
+
   HTTP_REQUEST
+  HTTP_API
+
+  // AI
+  AI
+  AI_GOOGLE
+  AI_ANTHROPIC
+  AI_OPENAI
+
+  // UPLOAD
+  UPLOAD_IMAGE
+  UPLOAD_VIDEO
+  UPLOAD_PDF
+  UPLOAD_TEXT
+  UPLOAD_ALL
 }
 
 model Node {
@@ -123,4 +142,30 @@ model Connection {
   updatedAt DateTime @updatedAt
 
   @@unique([fromNodeId, toNodeId, fromOutput, toInput])
+}
+
+enum EnvironmentType {
+  DEVELOPMENT
+  PRODUCTION
+}
+
+enum CredentialType {
+  API_KEY
+  OAUTH
+  BOT_KEY
+}
+
+model Credential {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  value  String
+
+  isDisabled  Boolean?
+  environment EnvironmentType?
+  type        CredentialType?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

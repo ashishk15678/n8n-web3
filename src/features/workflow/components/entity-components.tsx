@@ -189,7 +189,7 @@ export const LoadingView = ({
   message,
 }: LoadingViewProps) => {
   return (
-    <div className="flex justify-center items-center h-full flex-1 flex-col gap-y-4">
+    <div className="flex justify-center items-center h-full w-full flex-1 flex-row gap-4 py-16">
       <Loader2Icon className="size-6 animate-spin text-primary" />
       <p className="text-sm">{message || `Loading ${entity}...`}</p>
     </div>
@@ -230,7 +230,7 @@ export const EmptyView = ({ message, onNew }: EmptyViewProps) => {
   );
 };
 
-interface EntityListProps<T> {
+export interface EntityListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
   getKey?: (item: T, index?: number) => string | undefined;

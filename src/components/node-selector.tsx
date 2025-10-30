@@ -1,7 +1,7 @@
 "use client";
 
 import { NodeType } from "@/generated/prisma";
-import { GlobeIcon, MousePointerIcon } from "lucide-react";
+import { GlobeIcon, MousePointerIcon, UploadIcon } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -38,6 +38,60 @@ const executionNodes: NodeTypeOption[] = [
     label: "Http Request",
     description: "Make http requests with ease.",
     icon: GlobeIcon,
+  },
+];
+
+const aiNodes: NodeTypeOption[] = [
+  {
+    type: NodeType.AI_GOOGLE,
+    label: "Google AI Node",
+    description: "Add gemini model and work with it at ease",
+    icon: GlobeIcon,
+  },
+  {
+    type: NodeType.AI_ANTHROPIC,
+    label: "Anthropic AI Node",
+    description: "Use Claude models for text generation",
+    icon: GlobeIcon,
+  },
+  {
+    type: NodeType.AI_OPENAI,
+    label: "OpenAI Node",
+    description: "Use GPT models for text generation",
+    icon: GlobeIcon,
+  },
+];
+
+const uploadNodes: NodeTypeOption[] = [
+  {
+    type: NodeType.UPLOAD_ALL,
+    label: "Upload all type of content",
+    description: "Upload content of your liking to this node",
+    icon: UploadIcon,
+  },
+  {
+    type: NodeType.UPLOAD_IMAGE,
+    label: "Upload Image",
+    description: "Upload image to this node",
+    icon: UploadIcon,
+  },
+  {
+    type: NodeType.UPLOAD_VIDEO,
+    label: "Upload video",
+    description: "Upload video/s to this node",
+    icon: UploadIcon,
+  },
+  {
+    type: NodeType.UPLOAD_TEXT,
+    label: "Upload text content",
+    description: "Upload text to this node",
+    icon: UploadIcon,
+  },
+  {
+    type: NodeType.UPLOAD_PDF,
+    label: "Upload PDF",
+    description: "Upload PDF to this node",
+    icon: UploadIcon,
   },
 ];
 
@@ -140,6 +194,76 @@ export const NodeSelector = ({
 
         <div>
           {executionNodes.map((node) => {
+            const Icon = node.icon;
+            return (
+              <div
+                key={node.type}
+                className="w-full justify-start h-auto py-5 px-4 rounded-none cursor-pointer border-l-2 border-transparent hover:border-l-primary  hover:bg-primary/5 "
+                onClick={() => handleNodeSelect(node)}
+              >
+                <div className="flex items-center gap-6 w-full overflow-hidden">
+                  {typeof node.icon == "string" ? (
+                    <img
+                      src={node.icon}
+                      className="size-5 object-contain rounded-sm"
+                      alt={node.label}
+                    />
+                  ) : (
+                    <Icon className="size-5" />
+                  )}
+                  <div className="flex flex-col items-start text-left ">
+                    <span className="text-sm font-medium">{node.label}</span>
+                    {node.description && (
+                      <span className="text-xs font-muted-foreground">
+                        {node.description}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <Separator />
+
+        <div>
+          {aiNodes.map((node) => {
+            const Icon = node.icon;
+            return (
+              <div
+                key={node.type}
+                className="w-full justify-start h-auto py-5 px-4 rounded-none cursor-pointer border-l-2 border-transparent hover:border-l-primary  hover:bg-primary/5 "
+                onClick={() => handleNodeSelect(node)}
+              >
+                <div className="flex items-center gap-6 w-full overflow-hidden">
+                  {typeof node.icon == "string" ? (
+                    <img
+                      src={node.icon}
+                      className="size-5 object-contain rounded-sm"
+                      alt={node.label}
+                    />
+                  ) : (
+                    <Icon className="size-5" />
+                  )}
+                  <div className="flex flex-col items-start text-left ">
+                    <span className="text-sm font-medium">{node.label}</span>
+                    {node.description && (
+                      <span className="text-xs font-muted-foreground">
+                        {node.description}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <Separator />
+
+        <div>
+          {uploadNodes.map((node) => {
             const Icon = node.icon;
             return (
               <div

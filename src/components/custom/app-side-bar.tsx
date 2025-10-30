@@ -23,10 +23,8 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/auth-client";
-import {
-  hasActiveSubscription,
-  useHasActiveSubscription,
-} from "@/features/subsciption/hooks/use-subscription";
+import { useHasActiveSubscription } from "@/features/subsciption/hooks/use-subscription";
+import { ModeToggle } from "@/features/theme-toggler";
 
 export default function AppSideBar() {
   const menuItems = [
@@ -57,7 +55,7 @@ export default function AppSideBar() {
   const { isLoading, hasActiveSubscription } = useHasActiveSubscription();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader>
         <SidebarMenuItem>
           <SidebarMenuButton asChild className="gap-x-4 h-10 px-4">
@@ -99,6 +97,9 @@ export default function AppSideBar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenuItem>
+          <ModeToggle />
+        </SidebarMenuItem>
         {!hasActiveSubscription && !isLoading && (
           <SidebarMenuItem>
             <SidebarMenuButton

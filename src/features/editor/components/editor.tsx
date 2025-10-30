@@ -36,6 +36,7 @@ import {
   Controls,
   MiniMap,
   Panel,
+  BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { nodeComponents } from "@/config/node-components";
@@ -43,6 +44,7 @@ import { AddNodeButton } from "./add-node-button";
 import { useAtomValue, useSetAtom } from "jotai";
 import { editorAtom } from "../store/atom";
 import { toast } from "sonner";
+import { SearchComponent } from "@/components/custom/search-component";
 
 export const EditorLoading = () => <LoadingView message="Loading Editor..." />;
 
@@ -89,7 +91,7 @@ export const Editor = ({ workflowId }: { workflowId: string }) => {
         selectionOnDrag
         panOnDrag={false}
       >
-        <Background />
+        <Background className="stroke-1 opacity-100  dark:opacity-50" />
         <Controls />
         <MiniMap />
         <Panel position="top-right">
@@ -107,6 +109,7 @@ export const EditorHeader = ({ workflowId }: { workflowId: string }) => {
         <SidebarTrigger />
         <div className="flex flex-row items-center justify-between w-full">
           <EditorBreadCrumbs workflowId={workflowId} />
+          <SearchComponent />
           <EditorSaveButton workflowId={workflowId} />
         </div>
       </header>

@@ -1,52 +1,65 @@
-import { NON_PREMIUM_LIMIT, PAGINATION } from "@/config/constants";
-import { NodeType } from "@/generated/prisma";
+import { CREDENTIAL, NON_PREMIUM_LIMIT, PAGINATION } from "@/config/constants";
+import { CredentialType, EnvironmentType, NodeType } from "@/generated/prisma";
 import prisma from "@/lib/db";
 import {
   createTrpcRouter,
   premiumProcedure,
   protectedProcedure,
 } from "@/trpc/init";
-import { generateSlug } from "random-word-slugs";
-import z from "zod";
-import type { Edge, Node } from "@xyflow/react";
 import { TRPCError } from "@trpc/server";
+import z from "zod";
 
-export const WorkFlowsRouter = createTrpcRouter({
-  create: protectedProcedure.mutation(async ({ ctx }) => {
-    const workflows = await prisma.workflow.count();
-    if (workflows > NON_PREMIUM_LIMIT.MAX_WORKFLOWS) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: `needs to have premium to create more than ${NON_PREMIUM_LIMIT.MAX_WORKFLOWS} workflows.`,
-      });
-    }
-    return prisma.workflow.create({
-      data: {
-        name: generateSlug(3),
-        userId: ctx.auth.user.id,
-        nodes: {
-          createMany: {
-            data: [
-              {
-                type: NodeType.INITIAL,
-                position: { x: 0, y: 0 },
-                name: NodeType.INITIAL,
-              },
-              {
-                type: NodeType.INITIAL,
-                position: { x: 100, y: 200 },
-                name: NodeType.INITIAL,
-              },
-            ],
+export const CredentialsRouter = createTrpcRouter({
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        value: z.string().min(1),
+        type: z
+          .enum([
+            CredentialType.API_KEY,
+            CredentialType.BOT_KEY,
+            CredentialType.OAUTH,
+          ])
+          .optional(),
+        isDisabled: z.boolean(),
+        environment: z
+          .enum([EnvironmentType.DEVELOPMENT, EnvironmentType.PRODUCTION])
+          .optional(),
+      }),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input: { name, value, type, isDisabled, environment },
+      }) => {
+        const credentialsCount = await prisma.credential.count({
+          where: {
+            userId: ctx.auth.user.id,
           },
-        },
+        });
+
+        if (credentialsCount >= NON_PREMIUM_LIMIT.MAX_CREDENTIALS)
+          throw new TRPCError({
+            message: `Non premium users cannot create more than ${NON_PREMIUM_LIMIT.MAX_CREDENTIALS} credentials.`,
+            code: "FORBIDDEN",
+          });
+        return prisma.credential.create({
+          data: {
+            userId: ctx.auth.user.id,
+            name,
+            value,
+            type,
+            isDisabled,
+            environment,
+          },
+        });
       },
-    });
-  }),
+    ),
   remove: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(({ input, ctx }) => {
-      return prisma.workflow.delete({
+      return prisma.credential.delete({
         where: {
           id: input.id,
           userId: ctx.auth.user.id,
@@ -173,8 +186,8 @@ export const WorkFlowsRouter = createTrpcRouter({
       }),
     )
     .query(async ({ ctx, input: { page, pageSize, search } }) => {
-      const [items, totalCount] = await Promise.all([
-        prisma.workflow.findMany({
+      const [raw_items, totalCount] = await Promise.all([
+        prisma.credential.findMany({
           skip: (page - 1) * pageSize,
           take: pageSize,
           where: {
@@ -199,6 +212,10 @@ export const WorkFlowsRouter = createTrpcRouter({
         }),
       ]);
 
+      const items = raw_items.map((item) => ({
+        ...item,
+        value: `${item.value.substring(0, 3)}...${item.value.substring(item.value.length - 3, item.value.length)}`,
+      }));
       const totalPages = Math.ceil(totalCount / pageSize);
       const hasNextPage = page < totalPages;
       const hasPreviousPage = page > 1;

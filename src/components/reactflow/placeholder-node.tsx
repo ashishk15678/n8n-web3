@@ -14,6 +14,7 @@ export const PlaceholderNode = forwardRef<HTMLDivElement, PlaceholderNodeProps>(
   ({ children, onClick }, ref) => {
     return (
       <BaseNode
+        status="initial"
         ref={ref}
         className="w-auto h-auto border-dashed border-gray-400 bg-card p-4 text-center text-gray-400 shadow-none"
         onClick={onClick}
