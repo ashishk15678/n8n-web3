@@ -31,6 +31,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import Image from "next/image";
 import { Icon, LucideIcon } from "lucide-react";
 import { Credential } from "@/generated/prisma";
+import { WorkflowNode } from "@/components/workflow-node";
 export type AiProviders = "GOOGLE" | "ANTHROPIC" | "OPENAI";
 
 interface ModelOption {
@@ -213,108 +214,132 @@ export const AINode = memo(
   },
   "required": ["answer"]
 }`;
+
+    const { setNodes, setEdges } = useReactFlow();
+
+    const handleDelete = () => {
+      setNodes((currentNode) => currentNode.filter((node) => node.id !== id));
+      setEdges((currentEdges) =>
+        currentEdges.filter((edge) => edge.source !== id && edge.target !== id),
+      );
+    };
+
     const Icon = image as LucideIcon;
     return (
-      <BaseNode status={status} {...props}>
-        <BaseNodeHeader>
-          <div className="flex items-center gap-2 w-full rounded-l-2xl text-sm overflow-hidden">
-            {typeof image === "string" ? (
-              <Image
-                src={image}
-                alt={`${from} icon`}
-                className="size-8 object-contain rounded-sm"
-                width={16}
-                height={16}
-              />
-            ) : (
-              <Icon className="size-4 text-muted-foreground" />
-            )}
-            <BaseNodeHeaderTitle>AI Node</BaseNodeHeaderTitle>
-            <div className="ml-auto text-[10px] text-muted-foreground">
-              {selectedModel ? selectedModel : "Model: not selected"}
-              {stream ? " • streaming" : ""}
-            </div>
-          </div>
-        </BaseNodeHeader>
-        <BaseNodeContent>
-          <div className="flex flex-col gap-y-4 ">
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs">Model</Label>
-              <Select
-                value={selectedModel}
-                onValueChange={(value) => updateNodeData({ model: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modelOptions.map((m) => (
-                    <SelectItem key={m.name} value={m.name}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs">Prompt</Label>
-              <Textarea
-                disabled={true}
-                value={prompt || ""}
-                onChange={(e) => updateNodeData({ prompt: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={stream}
-                    onCheckedChange={(v) => updateNodeData({ stream: v })}
-                  />
-                  <Label className="text-xs">Stream</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={useSchema}
-                    onCheckedChange={(v) => updateNodeData({ useSchema: v })}
-                  />
-                  <Label className="text-xs">Use schema</Label>
-                </div>
+      <WorkflowNode showToolBar onDelete={handleDelete}>
+        <BaseNode status={status} {...props}>
+          <BaseNodeHeader>
+            <div className="flex items-center gap-2 w-full rounded-l-2xl text-sm overflow-hidden">
+              {typeof image === "string" ? (
+                <Image
+                  src={image}
+                  alt={`${from} icon`}
+                  className="size-8 object-contain rounded-sm"
+                  width={16}
+                  height={16}
+                />
+              ) : (
+                <Icon className="size-4 text-muted-foreground" />
+              )}
+              <BaseNodeHeaderTitle>AI Node</BaseNodeHeaderTitle>
+              <div className="ml-auto text-[10px] text-muted-foreground">
+                {selectedModel ? selectedModel : "Model: not selected"}
+                {stream ? " • streaming" : ""}
               </div>
             </div>
-            {useSchema && (
+          </BaseNodeHeader>
+          <BaseNodeContent>
+            <div className="flex flex-col gap-y-4 ">
               <div className="flex flex-col gap-2">
-                <Label className="text-xs">JSON Schema</Label>
+                <Label className="text-xs">Model</Label>
+                <Select
+                  value={selectedModel}
+                  onValueChange={(value) => updateNodeData({ model: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelOptions.map((m) => (
+                      <SelectItem key={m.name} value={m.name}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-xs">Prompt</Label>
                 <Textarea
-                  placeholder={schemaPlaceholder}
-                  value={schemaText}
-                  onChange={(e) => updateNodeData({ schema: e.target.value })}
+                  disabled={true}
+                  value={prompt || ""}
+                  onChange={(e) => updateNodeData({ prompt: e.target.value })}
                 />
               </div>
-            )}
-            {typeof (nodeData.response as string | undefined) === "string" && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-xs">Response</Label>
-                <Textarea
-                  value={(nodeData.response as string) || ""}
-                  readOnly
-                />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={stream}
+                      onCheckedChange={(v) => updateNodeData({ stream: v })}
+                    />
+                    <Label className="text-xs">Stream</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={useSchema}
+                      onCheckedChange={(v) => updateNodeData({ useSchema: v })}
+                    />
+                    <Label className="text-xs">Use schema</Label>
+                  </div>
+                </div>
               </div>
-            )}
-            {typeof (nodeData.error as string | undefined) === "string" &&
-              nodeData.error && (
-                <div className="flex flex-col gap-1">
-                  <Label className="text-xs text-red-600">Error</Label>
-                  <Textarea value={(nodeData.error as string) || ""} readOnly />
+              {useSchema && (
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs">JSON Schema</Label>
+                  <Textarea
+                    placeholder={schemaPlaceholder}
+                    value={schemaText}
+                    onChange={(e) => updateNodeData({ schema: e.target.value })}
+                  />
                 </div>
               )}
-            {/*<BaseHandle id="target-1" type="target" position={Position.Left} />*/}
-            <BaseHandle id="source-1" type="source" position={Position.Right} />
+              {typeof (nodeData.response as string | undefined) ===
+                "string" && (
+                <div className="flex flex-col gap-1">
+                  <Label className="text-xs">Response</Label>
+                  <Textarea
+                    value={(nodeData.response as string) || ""}
+                    readOnly
+                  />
+                </div>
+              )}
+              {typeof (nodeData.error as string | undefined) === "string" &&
+                nodeData.error && (
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-red-600">Error</Label>
+                    <Textarea
+                      value={(nodeData.error as string) || ""}
+                      readOnly
+                    />
+                  </div>
+                )}
+              {/*<BaseHandle id="target-1" type="target" position={Position.Left} />*/}
+              <BaseHandle
+                id="source-1"
+                type="source"
+                position={Position.Right}
+              />
 
-            <BaseHandle id="target-1" type="target" position={Position.Left} />
-          </div>
-        </BaseNodeContent>
-      </BaseNode>
+              <BaseHandle
+                id="target-1"
+                type="target"
+                position={Position.Left}
+              />
+            </div>
+          </BaseNodeContent>
+        </BaseNode>
+      </WorkflowNode>
     );
   },
 );

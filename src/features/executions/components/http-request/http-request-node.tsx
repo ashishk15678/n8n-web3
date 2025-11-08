@@ -11,7 +11,7 @@ type HttpRequestNodeData = {
   endpoint?: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   body?: string;
-  status: NodeStatus;
+  variableName?: string;
 };
 
 type HttpRequestNodeType = Node<HttpRequestNodeData>;
@@ -39,25 +39,24 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
 
   const nodeData = props.data;
   const description = nodeData.endpoint
-    ? `${nodeData.method || "GET"}: ${nodeData.endpoint}`
+    ? `${nodeData.variableName} ${nodeData.method || "GET"}: ${nodeData.endpoint?.slice(0, 7)}`
     : "Not configured.";
   return (
     <>
-      <BaseExecutionNode
-        {...props}
-        id={props.id}
-        icon={GlobeIcon}
-        name="Http Request"
-        status={nodeData.status}
-        description={description}
-        onSettings={() => setOpen(true)}
-        onDoubleClick={() => setOpen(true)}
-      />
       <HttpRequestDialog
         open={isOpen}
         onOpenChange={setOpen}
         onSubmit={handleSubmit}
         defaultValues={nodeData}
+      />
+      <BaseExecutionNode
+        {...props}
+        id={props.id}
+        icon={GlobeIcon}
+        name="Http Request"
+        description={description}
+        onSettings={() => setOpen(true)}
+        onDoubleClick={() => setOpen(true)}
       />
     </>
   );
