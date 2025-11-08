@@ -3,6 +3,7 @@ import { NodeExecutor } from "../types";
 import { ManualTriggerExecutor } from "@/features/triggers/manual-trigger/executor";
 import { HttpRequestTriggerExecutor } from "../components/http-request/executor";
 import { googleFormTriggerExecutor } from "@/features/triggers/google-form-trigger/executor";
+import { StripeTriggerExecutor } from "@/features/triggers/stripe-trigger/executor";
 
 export const ExecutorRegistry: Record<NodeType, NodeExecutor> = {
   [NodeType.AI]: ManualTriggerExecutor,
@@ -12,6 +13,7 @@ export const ExecutorRegistry: Record<NodeType, NodeExecutor> = {
   [NodeType.HTTP_API]: ManualTriggerExecutor,
   [NodeType.HTTP_REQUEST]: HttpRequestTriggerExecutor,
   [NodeType.GOOGLE_FORM_TRIGGER]: googleFormTriggerExecutor,
+  [NodeType.STRIPE_TRIGGER]: StripeTriggerExecutor,
   [NodeType.INITIAL]: ManualTriggerExecutor,
   [NodeType.MANUAL_TRIGGER]: ManualTriggerExecutor,
   [NodeType.TIMED_TRIGGER]: ManualTriggerExecutor,

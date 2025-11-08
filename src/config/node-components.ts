@@ -16,12 +16,14 @@ import {
   VideoUploadNode,
 } from "@/features/manual-upload/upload-node";
 import { GoogleFormTriggerNode } from "@/features/triggers/google-form-trigger/node";
+import { StripeTriggerNode } from "@/features/triggers/stripe-trigger/node";
 
 export const nodeComponents = {
   [NodeType.INITIAL]: InitalNode,
   [NodeType.MANUAL_TRIGGER]: ManualTriggerNode,
   [NodeType.HTTP_REQUEST]: HttpRequestNode,
   [NodeType.GOOGLE_FORM_TRIGGER]: GoogleFormTriggerNode,
+  [NodeType.STRIPE_TRIGGER]: StripeTriggerNode,
 
   // AI
   [NodeType.AI_GOOGLE]: GoogleAiNode,
