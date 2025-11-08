@@ -7,6 +7,8 @@ import { NonRetriableError } from "inngest";
 import prisma from "@/lib/db";
 import { topoLogicalSort } from "../utils";
 import { getExecutor } from "@/features/executions/lib/executor-registry";
+import { httpRequestChannel } from "../channels/http-request";
+import { manualTriggerChannel } from "../channels/manual-trigger";
 
 const google = createGoogleGenerativeAI({});
 const openai = createOpenAI();
@@ -14,8 +16,11 @@ const anthropic = createAnthropic();
 
 export const executeWorkflow = inngest.createFunction(
   { id: "execute-workflow" },
-  { event: "workflow/execute.workflow" },
-  async ({ event, step }) => {
+  {
+    event: "workflow/execute.workflow",
+    channels: [httpRequestChannel(), manualTriggerChannel()],
+  },
+  async ({ event, step, publish }) => {
     const workflowId = event.data.workflowId;
     if (!workflowId) throw new NonRetriableError("Workflow Id is missing");
 
@@ -41,6 +46,7 @@ export const executeWorkflow = inngest.createFunction(
         nodeId: node.id,
         context,
         step,
+        publish,
       });
     }
     return { result: context, workflowId };

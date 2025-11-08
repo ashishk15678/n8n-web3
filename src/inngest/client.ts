@@ -1,2 +1,6 @@
 import { Inngest } from "inngest";
-export const inngest = new Inngest({ id: "n8n" });
+import { realtimeMiddleware } from "@inngest/realtime/middleware";
+export const inngest = new Inngest({
+  id: "n8n",
+  middleware: [realtimeMiddleware()],
+});

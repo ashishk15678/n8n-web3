@@ -6,6 +6,9 @@ import { BaseExecutionNode } from "../../base-execution-node";
 import { memo, useState } from "react";
 import { NodeStatus } from "@/components/reactflow/node-status-indicator";
 import { HttpReqestFormValues, HttpRequestDialog } from "./dialog";
+import { useNodeStatus } from "../../hooks/use-node-status";
+import { fetchHttpRequestRealtimeToken } from "./actions";
+import { httpRequestChannel } from "@/inngest/channels/http-request";
 
 type HttpRequestNodeData = {
   endpoint?: string;
@@ -20,6 +23,13 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
   const [isOpen, setOpen] = useState(false);
 
   const { setNodes } = useReactFlow();
+
+  const nodeStatus = useNodeStatus({
+    nodeId: props.id,
+    channel: httpRequestChannel().name,
+    topic: "status",
+    refreshToken: fetchHttpRequestRealtimeToken,
+  });
   const handleSubmit = (values: HttpReqestFormValues) => {
     setNodes((nodes) =>
       nodes.map((node) => {
@@ -51,6 +61,7 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
       />
       <BaseExecutionNode
         {...props}
+        status={nodeStatus}
         id={props.id}
         icon={GlobeIcon}
         name="Http Request"
