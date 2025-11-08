@@ -1,6 +1,5 @@
 import { Node, NodeProps, useReactFlow } from "@xyflow/react";
 import { memo, useState } from "react";
-import { BaseTriggerNode } from "../base-trigger-node";
 import { MousePointerIcon } from "lucide-react";
 import { ManualTriggerDialog } from "./dialog";
 import { NodeStatus } from "@/components/reactflow/node-status-indicator";
@@ -10,6 +9,7 @@ import { editorAtom } from "@/features/editor/store/atom";
 import { useNodeStatus } from "@/features/executions/hooks/use-node-status";
 import { manualTriggerChannel } from "@/inngest/channels/manual-trigger";
 import { fetchManualTriggerRealtimeToken } from "./actions";
+import { BaseTriggerNode } from "../components/base-trigger-node";
 
 export const ManualTriggerNode = memo((props: NodeProps) => {
   const [open, setOpen] = useState(false);
@@ -35,32 +35,33 @@ export const ManualTriggerNode = memo((props: NodeProps) => {
         status={nodeStatus}
         onDoubleClick={() => setOpen(true)}
         onSettings={() => setOpen(true)}
+        showTrigger
       ></BaseTriggerNode>
     </>
   );
 });
 
-export function setNode({
-  id,
-  data,
-  setNodes,
-}: {
-  id: string;
-  data: Node;
-  setNodes: (nodes: Node[]) => Node[];
-}) {
-  setNodes((nodes: Node[]) =>
-    nodes.map((node: Node) => {
-      if (node.id == id) {
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            data,
-          },
-        };
-      }
-      return node;
-    }),
-  );
-}
+// export function setNode({
+//   id,
+//   data,
+//   setNodes,
+// }: {
+//   id: string;
+//   data: Node;
+//   setNodes: (nodes: Node[]) => Node[];
+// }) {
+//   setNodes((nodes: Node[]) =>
+//     nodes.map((node: Node) => {
+//       if (node.id == id) {
+//         return {
+//           ...node,
+//           data: {
+//             ...node.data,
+//             data,
+//           },
+//         };
+//       }
+//       return node;
+//     }),
+//   );
+// }

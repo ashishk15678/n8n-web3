@@ -1,7 +1,8 @@
 import { NodeType } from "@/generated/prisma";
 import { NodeExecutor } from "../types";
-import { ManualTriggerExecutor } from "@/features/triggers/components/manual-trigger/executor";
+import { ManualTriggerExecutor } from "@/features/triggers/manual-trigger/executor";
 import { HttpRequestTriggerExecutor } from "../components/http-request/executor";
+import { googleFormTriggerExecutor } from "@/features/triggers/google-form-trigger/executor";
 
 export const ExecutorRegistry: Record<NodeType, NodeExecutor> = {
   [NodeType.AI]: ManualTriggerExecutor,
@@ -10,6 +11,7 @@ export const ExecutorRegistry: Record<NodeType, NodeExecutor> = {
   [NodeType.AI_OPENAI]: ManualTriggerExecutor,
   [NodeType.HTTP_API]: ManualTriggerExecutor,
   [NodeType.HTTP_REQUEST]: HttpRequestTriggerExecutor,
+  [NodeType.GOOGLE_FORM_TRIGGER]: googleFormTriggerExecutor,
   [NodeType.INITIAL]: ManualTriggerExecutor,
   [NodeType.MANUAL_TRIGGER]: ManualTriggerExecutor,
   [NodeType.TIMED_TRIGGER]: ManualTriggerExecutor,

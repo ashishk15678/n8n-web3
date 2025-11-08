@@ -11,6 +11,7 @@ import z from "zod";
 import type { Edge, Node } from "@xyflow/react";
 import { TRPCError } from "@trpc/server";
 import { inngest } from "@/inngest/client";
+import { sendWorkflowExecution } from "@/inngest/utils";
 
 export const WorkFlowsRouter = createTrpcRouter({
   execute: protectedProcedure
@@ -27,10 +28,7 @@ export const WorkFlowsRouter = createTrpcRouter({
         },
       });
 
-      await inngest.send({
-        name: "workflow/execute.workflow",
-        data: { workflowId: id },
-      });
+      await sendWorkflowExecution({ workflowId: id });
 
       return workflow;
     }),

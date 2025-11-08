@@ -23,6 +23,7 @@ interface BaseTriggerNodeProps extends NodeProps {
   onSettings?: () => void;
   onDoubleClick?: () => void;
   onTrigger: () => void;
+  showTrigger?: boolean;
 }
 
 export const BaseTriggerNode = ({
@@ -35,6 +36,7 @@ export const BaseTriggerNode = ({
   onDoubleClick,
   onSettings,
   onTrigger,
+  showTrigger = false,
 }: BaseTriggerNodeProps) => {
   const { setNodes, setEdges, getNode, getEdges } = useReactFlow();
   const handleDelete = () => {
@@ -91,12 +93,14 @@ export const BaseTriggerNode = ({
         variant="border"
         className="rounded-l-2xl"
       >
-        <button
-          onClick={handleTrigger}
-          className="bg-primary/10 absolute -right-2 p-1 rounded-r-full hover:translate-x-2 transition-all"
-        >
-          <ZapIcon className="stroke-1 size-2 " />{" "}
-        </button>
+        {showTrigger && (
+          <button
+            onClick={handleTrigger}
+            className="bg-primary/10 absolute -right-2 p-1 rounded-r-full hover:translate-x-2 transition-all"
+          >
+            <ZapIcon className="stroke-1 size-2 " />{" "}
+          </button>
+        )}
         <BaseNode
           status={status}
           onDoubleClick={onDoubleClick}

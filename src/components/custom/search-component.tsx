@@ -19,7 +19,6 @@ export function SearchComponent() {
         event.stopImmediatePropagation();
         ref && ref.current && ref.current.focus();
         setOpen(true);
-        console.log("Ctrl/Cmd + K pressed! Opening...");
       }
     }
 
