@@ -5,13 +5,12 @@ import { GlobeIcon } from "lucide-react";
 import { BaseExecutionNode } from "../../base-execution-node";
 import { memo, useState } from "react";
 import { NodeStatus } from "@/components/reactflow/node-status-indicator";
-import { HttpRequestDialog } from "./dialog";
+import { HttpReqestFormValues, HttpRequestDialog } from "./dialog";
 
 type HttpRequestNodeData = {
   endpoint?: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
   body?: string;
-  [key: string]: unknown;
   status: NodeStatus;
 };
 
@@ -21,11 +20,7 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
   const [isOpen, setOpen] = useState(false);
 
   const { setNodes } = useReactFlow();
-  const handleSubmit = (values: {
-    endPoint: string;
-    method: string;
-    body?: string;
-  }) => {
+  const handleSubmit = (values: HttpReqestFormValues) => {
     setNodes((nodes) =>
       nodes.map((node) => {
         if (node.id == props.id) {
@@ -33,9 +28,7 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
             ...node,
             data: {
               ...node.data,
-              endpoint: values.endPoint,
-              body: values.body,
-              method: values.method,
+              ...values,
             },
           };
         }
@@ -64,9 +57,7 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
         open={isOpen}
         onOpenChange={setOpen}
         onSubmit={handleSubmit}
-        defaultEndPoint={nodeData.endpoint}
-        defaultMethod={nodeData.method}
-        defaultBody={nodeData.body}
+        defaultValues={nodeData}
       />
     </>
   );

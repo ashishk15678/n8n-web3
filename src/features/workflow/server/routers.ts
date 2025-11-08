@@ -10,8 +10,30 @@ import { generateSlug } from "random-word-slugs";
 import z from "zod";
 import type { Edge, Node } from "@xyflow/react";
 import { TRPCError } from "@trpc/server";
+import { inngest } from "@/inngest/client";
 
 export const WorkFlowsRouter = createTrpcRouter({
+  execute: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ input: { id }, ctx }) => {
+      const workflow = prisma.workflow.findUniqueOrThrow({
+        where: {
+          userId: ctx.auth.user.id,
+          id,
+        },
+      });
+
+      await inngest.send({
+        name: "workflow/execute.workflow",
+        data: { workflowId: id },
+      });
+
+      return workflow;
+    }),
   create: protectedProcedure.mutation(async ({ ctx }) => {
     const workflows = await prisma.workflow.count();
     if (workflows > NON_PREMIUM_LIMIT.MAX_WORKFLOWS) {

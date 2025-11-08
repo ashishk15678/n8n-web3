@@ -1,7 +1,7 @@
 import { inngest } from "@/inngest/client";
-import { execute, helloWorld } from "@/inngest/functions/helloWorld";
+import { executeWorkflow } from "@/inngest/functions";
 import { serve } from "inngest/next";
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [helloWorld, execute],
+  functions: [executeWorkflow],
 });

@@ -23,7 +23,7 @@ export default async function Page({
         <ErrorBoundary fallback={<EditorError />}>
           <Suspense fallback={<EditorLoading />}>
             <EditorHeader workflowId={workflowId} />
-            <div className="size-full h-screen">
+            <div className="h-screen">
               <Editor workflowId={workflowId} />
             </div>
           </Suspense>

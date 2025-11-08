@@ -21,7 +21,7 @@ import {
 } from "@/features/workflow/hooks/useWorkflows";
 import { SaveIcon } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Edge,
   Node,
@@ -45,6 +45,8 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { editorAtom } from "../store/atom";
 import { toast } from "sonner";
 import { SearchComponent } from "@/components/custom/search-component";
+import { NodeType } from "@/generated/prisma";
+import { ExecuteWorkflowButton } from "@/components/custom/execute-workflow-button";
 
 export const EditorLoading = () => <LoadingView message="Loading Editor..." />;
 
@@ -74,6 +76,11 @@ export const Editor = ({ workflowId }: { workflowId: string }) => {
     [],
   );
 
+  const hasManualTrigger = useMemo(
+    () => nodes.some((node) => node.type === NodeType.MANUAL_TRIGGER),
+    [nodes],
+  );
+
   return (
     <div className="size-full">
       <ReactFlow
@@ -97,6 +104,11 @@ export const Editor = ({ workflowId }: { workflowId: string }) => {
         <Panel position="top-right">
           <AddNodeButton />
         </Panel>
+        {hasManualTrigger && (
+          <Panel position="top-center">
+            <ExecuteWorkflowButton workflowId={workflowId} />
+          </Panel>
+        )}
       </ReactFlow>
     </div>
   );
