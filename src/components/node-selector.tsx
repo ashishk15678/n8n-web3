@@ -58,19 +58,19 @@ const aiNodes: NodeTypeOption[] = [
     type: NodeType.AI_GOOGLE,
     label: "Google AI Node",
     description: "Add gemini model and work with it at ease",
-    icon: GlobeIcon,
+    icon: "/google.svg",
   },
   {
     type: NodeType.AI_ANTHROPIC,
     label: "Anthropic AI Node",
     description: "Use Claude models for text generation",
-    icon: GlobeIcon,
+    icon: "/anthropic.png",
   },
   {
     type: NodeType.AI_OPENAI,
     label: "OpenAI Node",
     description: "Use GPT models for text generation",
-    icon: GlobeIcon,
+    icon: "/openai.svg",
   },
 ];
 
