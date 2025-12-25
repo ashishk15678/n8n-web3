@@ -122,8 +122,10 @@ model Node {
   outputConnection Connection[] @relation("FromNode")
   inputConnection  Connection[] @relation("ToNode")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  credential   Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  credentialId String?
 }
 
 model Connection {
@@ -155,6 +157,9 @@ enum CredentialType {
   API_KEY
   OAUTH
   BOT_KEY
+  OPENAI
+  GEMINI
+  ANTHROPIC
 }
 
 model Credential {
@@ -167,6 +172,8 @@ model Credential {
   isDisabled  Boolean?
   environment EnvironmentType?
   type        CredentialType?
+
+  Node Node[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

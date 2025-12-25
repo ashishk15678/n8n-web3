@@ -1,11 +1,7 @@
-import { CREDENTIAL, NON_PREMIUM_LIMIT, PAGINATION } from "@/config/constants";
-import { CredentialType, EnvironmentType, NodeType } from "@/generated/prisma";
+import { NON_PREMIUM_LIMIT, PAGINATION } from "@/config/constants";
+import { CredentialType, EnvironmentType } from "@/generated/prisma";
 import prisma from "@/lib/db";
-import {
-  createTrpcRouter,
-  premiumProcedure,
-  protectedProcedure,
-} from "@/trpc/init";
+import { createTrpcRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
 
@@ -13,18 +9,13 @@ export const CredentialsRouter = createTrpcRouter({
   create: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1),
+        name: z.string().min(1, "Name is required"),
+        type: z.enum(CredentialType),
         value: z.string().min(1),
-        type: z
-          .enum([
-            CredentialType.API_KEY,
-            CredentialType.BOT_KEY,
-            CredentialType.OAUTH,
-          ])
-          .optional(),
-        isDisabled: z.boolean(),
+        isDisabled: z.boolean().default(true),
         environment: z
           .enum([EnvironmentType.DEVELOPMENT, EnvironmentType.PRODUCTION])
+          .default(EnvironmentType.DEVELOPMENT)
           .optional(),
       }),
     )
@@ -48,7 +39,7 @@ export const CredentialsRouter = createTrpcRouter({
           data: {
             userId: ctx.auth.user.id,
             name,
-            value,
+            value, // TODO : secure api key
             type,
             isDisabled,
             environment,
@@ -71,61 +62,37 @@ export const CredentialsRouter = createTrpcRouter({
     .input(
       z.object({
         id: z.string(),
-        nodes: z.array(
-          z.object({
-            id: z.string(),
-            type: z.string().nullish(),
-            position: z.object({ x: z.number(), y: z.number() }),
-            data: z.record(z.string(), z.any().optional()),
-          }),
-        ),
-        edges: z.array(
-          z.object({
-            source: z.string(),
-            target: z.string(),
-            sourceHandle: z.string().nullish(),
-            targetHandle: z.string().nullish(),
-          }),
-        ),
+        name: z.string(),
+        type: z.enum(CredentialType),
+        value: z.string().min(1),
+        isDisabled: z.boolean().default(true),
+        environment: z
+          .enum([EnvironmentType.DEVELOPMENT, EnvironmentType.PRODUCTION])
+          .default(EnvironmentType.DEVELOPMENT)
+          .optional(),
       }),
     )
-    .mutation(async ({ ctx, input: { id, nodes, edges } }) => {
-      const workflow = await prisma.workflow.findUniqueOrThrow({
-        where: { id, userId: ctx.auth.user.id },
-      });
-
-      return await prisma.$transaction(async (tx) => {
-        await tx.node.deleteMany({ where: { workflowId: id } });
-        await tx.node.createMany({
-          data: nodes.map((node) => ({
-            id: node.id,
-            workflowId: id,
-            name: node.type || "unknown",
-            type: node.type as NodeType,
-            position: node.position,
-            data: node.data || {},
-          })),
+    .mutation(
+      async ({
+        ctx,
+        input: { id, name, type, value, isDisabled, environment },
+      }) => {
+        const credential = await prisma.credential.findUniqueOrThrow({
+          where: { id, userId: ctx.auth.user.id },
         });
 
-        await tx.connection.createMany({
-          data: edges.map((edge) => ({
-            workflowId: id,
-            fromNodeId: edge.source,
-            toNodeId: edge.target,
-            fromOutput: edge.sourceHandle || "main",
-            toInput: edge.targetHandle || "main",
-          })),
-        });
-
-        await tx.workflow.updateMany({
+        return await prisma.credential.update({
           where: { id },
           data: {
-            updatedAt: new Date(),
+            name,
+            type,
+            value,
+            isDisabled,
+            environment,
           },
         });
-        return workflow;
-      });
-    }),
+      },
+    ),
 
   updateName: protectedProcedure
     .input(z.object({ id: z.string(), newName: z.string().min(1) }))
@@ -144,33 +111,17 @@ export const CredentialsRouter = createTrpcRouter({
   getOne: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input: { id } }) => {
-      const workflow = await prisma.workflow.findUniqueOrThrow({
-        where: {
-          id: id,
-          userId: ctx.auth.user.id,
-        },
-        include: {
-          nodes: true,
-          connections: true,
-        },
+      return prisma.credential.findUniqueOrThrow({
+        where: { id, userId: ctx.auth.user.id },
       });
+    }),
 
-      const nodes: Node[] = workflow.nodes.map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: node.position as { x: number; y: number },
-        data: (node.data as Record<string, unknown>) || {},
-      }));
-
-      const edges: Edge[] = workflow.connections.map((connection) => ({
-        id: connection.id,
-        source: connection.fromNodeId,
-        target: connection.toNodeId,
-        sourceHandle: connection.fromOutput,
-        targetHandle: connection.toInput,
-      }));
-
-      return { ...workflow, nodes, edges };
+  getByType: protectedProcedure
+    .input(z.object({ type: z.enum(CredentialType) }))
+    .query(async ({ ctx, input: { type } }) => {
+      return prisma.credential.findMany({
+        where: { type, userId: ctx.auth.user.id },
+      });
     }),
 
   getMany: protectedProcedure
@@ -201,7 +152,7 @@ export const CredentialsRouter = createTrpcRouter({
             updatedAt: "desc",
           },
         }),
-        prisma.workflow.count({
+        prisma.credential.count({
           where: {
             userId: ctx.auth.user.id,
             name: {

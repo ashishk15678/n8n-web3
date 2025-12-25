@@ -17,7 +17,8 @@ export function SearchComponent() {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        ref && ref.current && ref.current.focus();
+        if (!ref || !ref.current) return;
+        (ref.current as HTMLElement).focus();
         setOpen(true);
       }
     }

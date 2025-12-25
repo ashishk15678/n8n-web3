@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  CommandIcon,
   CreditCardIcon,
+  DockIcon,
   FolderIcon,
   HistoryIcon,
   KeyIcon,
@@ -25,6 +27,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/auth-client";
 import { useHasActiveSubscription } from "@/features/subsciption/hooks/use-subscription";
 import { ModeToggle } from "@/features/theme-toggler";
+import { cn } from "@/lib/utils";
 
 export default function AppSideBar() {
   const menuItems = [
@@ -33,12 +36,12 @@ export default function AppSideBar() {
       items: [
         {
           title: "Workflows",
-          icon: FolderIcon,
+          icon: DockIcon,
           url: "/workflows",
         },
         {
           title: "Credentials",
-          icon: KeyIcon,
+          icon: CommandIcon,
           url: "/credentials",
         },
         {
@@ -55,10 +58,16 @@ export default function AppSideBar() {
   const { isLoading, hasActiveSubscription } = useHasActiveSubscription();
 
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar
+      collapsible="offcanvas"
+      className="bg-accent ring-none outline-none border-none"
+    >
       <SidebarHeader>
         <SidebarMenuItem>
-          <SidebarMenuButton asChild className="gap-x-4 h-10 px-4">
+          <SidebarMenuButton
+            asChild
+            className="gap-x-4 h-10 px-4 hover:bg-sidebar"
+          >
             <Link href={"/workflows"} prefetch>
               <NotepadTextDashedIcon width={30} height={30} />
               <span className="font-semibold text-sm">N8N</span>
@@ -68,23 +77,27 @@ export default function AppSideBar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarMenu>
+        <SidebarMenu className="px-4">
           {menuItems.map((group) => (
             <SidebarGroup key={group.title}>
               <SidebarGroupContent>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
-                      tooltip={item.title}
-                      isActive={
-                        item.url == "/"
-                          ? pathname == "/"
-                          : pathname.startsWith(item.url)
-                      }
                       asChild
-                      className="gap-x-10 h-10 px-4"
+                      tooltip={item.title}
+                      className="gap-x-10 h-10 px-4 hover:bg-background/50  rounded-2xl"
                     >
-                      <Link href={item.url} prefetch>
+                      <Link
+                        href={item.url}
+                        prefetch
+                        className={cn(
+                          (item.url == "/"
+                            ? pathname == "/"
+                            : pathname.startsWith(item.url)) &&
+                            "bg-background/50 shadow-md shadow-primary",
+                        )}
+                      >
                         <item.icon className="size-4" />
                         <span>{item.title}</span>
                       </Link>

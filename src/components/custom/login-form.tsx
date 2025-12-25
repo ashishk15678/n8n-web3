@@ -51,7 +51,7 @@ export default function LoginForm() {
         password: values.password,
       },
       {
-        onSuccess: () => router.push("/?msg=successfull+logged+in"),
+        onSuccess: () => router.push("/workflows?msg=successfull+logged+in"),
         onError: (ctx) => {
           toast.error(ctx.error.message);
         },
@@ -61,7 +61,7 @@ export default function LoginForm() {
   const isPending = form.formState.isSubmitting;
   return (
     <div className="flex flex-col gap-6">
-      <Card>
+      <Card className="rounded-3xl  bg-gradient-to-br from-card via-card/50 to-card">
         <CardHeader className="text-center">
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Login to continue</CardDescription>
@@ -74,7 +74,7 @@ export default function LoginForm() {
                   <Button
                     variant={"outline"}
                     disabled={isPending}
-                    className="flex flex-row justify-between space-x-2"
+                    className="flex flex-row justify-between space-x-2 rounded-2xl"
                   >
                     Continue with Github{" "}
                     <Image
@@ -89,7 +89,7 @@ export default function LoginForm() {
                   <Button
                     variant={"outline"}
                     disabled={isPending}
-                    className="flex flex-row justify-between space-x-2"
+                    className="flex flex-row justify-between space-x-2 rounded-2xl"
                   >
                     Continue with Google
                     <Image
@@ -112,6 +112,7 @@ export default function LoginForm() {
                         <Input
                           type="email"
                           placeholder="a@email.com"
+                          className="rounded-2xl"
                           {...field}
                         />
                       </FormControl>
@@ -130,6 +131,7 @@ export default function LoginForm() {
                         <Input
                           type="password"
                           placeholder="0124-abc"
+                          className="rounded-2xl"
                           {...field}
                         />
                       </FormControl>
@@ -140,7 +142,7 @@ export default function LoginForm() {
               </div>
               <Button
                 type="submit"
-                className="w-full mt-8"
+                className="w-full mt-8 rounded-2xl"
                 disabled={isPending}
               >
                 Login

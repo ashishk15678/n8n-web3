@@ -14,8 +14,11 @@ export const ExecutorRegistry: Record<NodeType, NodeExecutor> = {
   [NodeType.HTTP_REQUEST]: HttpRequestTriggerExecutor,
   [NodeType.GOOGLE_FORM_TRIGGER]: googleFormTriggerExecutor,
   [NodeType.STRIPE_TRIGGER]: StripeTriggerExecutor,
+  // @ts-ignore
   [NodeType.AI_GOOGLE]: GeminiTriggerExecutor,
+  // @ts-ignore
   [NodeType.AI_OPENAI]: OpenAiNode,
+  // @ts-ignore
   [NodeType.AI_ANTHROPIC]: AnthropicNode,
 
   [NodeType.INITIAL]: ManualTriggerExecutor,

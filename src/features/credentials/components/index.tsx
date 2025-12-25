@@ -9,6 +9,8 @@ import {
   useCreateCredential,
   useCredentials,
   useRemoveCredential,
+  useSuspenseCredential,
+  useSuspenseCredentials,
 } from "../hooks/useCreateCredential";
 import { KeyIcon, PlusIcon } from "lucide-react";
 import {
@@ -41,8 +43,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
+
+import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
+import {
+  EntityContainer,
+  EntityHeader,
+  EntityPagination,
+  EntitySearch,
+  ErrorView,
+  LoadingView,
+} from "../../workflow/components/entity-components";
+
+import { useRouter } from "next/navigation";
+import { useEntitySearch } from "@/hooks/use-entity-search";
+import type { Credential } from "@/generated/prisma";
+import {} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { useCredentialParams } from "../hooks/use-credential-params";
 
 export function CredentialList() {
   const { data } = useCredentials();
@@ -55,14 +72,7 @@ export function CredentialList() {
   return (
     <EntityList
       items={data.items}
-      renderItem={(data) => (
-        <EntityItem
-          title={data.name}
-          subtitle={data.value}
-          image={<KeyIcon className="size-4" />}
-          href="#"
-        />
-      )}
+      renderItem={(data) => <CredentialItem data={data} />}
     />
   );
 }
@@ -70,13 +80,12 @@ export function CredentialList() {
 const formSchema = z.object({
   name: z.string().min(1),
   value: z.string().min(1),
-  type: z
-    .enum([
-      CredentialType.API_KEY,
-      CredentialType.BOT_KEY,
-      CredentialType.OAUTH,
-    ])
-    .optional(),
+  type: z.enum([
+    CredentialType.API_KEY,
+    CredentialType.BOT_KEY,
+    CredentialType.OAUTH,
+  ]),
+  // .optional(),
   isDisabled: z.boolean(),
   environment: z
     .enum([EnvironmentType.DEVELOPMENT, EnvironmentType.PRODUCTION])
@@ -162,15 +171,27 @@ export function CredentialCreateDialog() {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={CredentialType.API_KEY}>
-                        API KEY
+                        Api key
                       </SelectItem>
 
                       <SelectItem value={CredentialType.BOT_KEY}>
-                        BOT KEY
+                        Bot key
                       </SelectItem>
 
                       <SelectItem value={CredentialType.OAUTH}>
-                        OAUTH KEY
+                        Oauth key
+                      </SelectItem>
+
+                      <SelectItem value={CredentialType.GEMINI}>
+                        Gemini
+                      </SelectItem>
+
+                      <SelectItem value={CredentialType.OPENAI}>
+                        Openai
+                      </SelectItem>
+
+                      <SelectItem value={CredentialType.ANTHROPIC}>
+                        Anthropic
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -245,3 +266,152 @@ export function CredentialCreateDialog() {
     </Dialog>
   );
 }
+
+export const CredentialsList = () => {
+  const credentials = useSuspenseCredentials();
+  return (
+    <EntityList
+      items={credentials.data.items}
+      getKey={(credential) => credential.id}
+      renderItem={(credential) => <CredentialItem data={credential} />}
+      emptyView={<CredentialsEmpty />}
+    />
+  );
+};
+
+export const CredentialsHeader = ({ disabled }: { disabled?: boolean }) => {
+  const createcredential = useCreateCredential();
+  const { handleError, modal } = useUpgradeModal();
+  const router = useRouter();
+  // const handleCreate = () => {
+  //   createcredential.mutate(undefined, {
+  //     onError: (error) => handleError(error),
+  //     onSuccess: (data: any) => router.push(`/credentials/${data.id}`),
+  //   });
+  // };
+
+  return (
+    <>
+      {modal}
+      <EntityHeader
+        title="credentials"
+        description="Create and manage your credentials"
+        // onNew={handleCreate}
+        newButtonLabel="New credential"
+        disabled={false}
+        isCreating={false}
+      />
+    </>
+  );
+};
+
+export const CredentialsSearch = () => {
+  const [params, setParams] = useCredentialParams();
+  const { searchValue, onSearchChange } = useEntitySearch({
+    params,
+    setParams,
+  });
+  return (
+    <EntitySearch
+      value={searchValue}
+      onChange={onSearchChange}
+      placeholder="Search credentials"
+    />
+  );
+};
+
+export const CredentialsPagination = () => {
+  const credentials = useSuspenseCredentials();
+  const [params, setParams] = useCredentialParams();
+  return (
+    <EntityPagination
+      disabled={credentials.isFetching}
+      // @ts-ignore
+      totalPages={credentials.data.totalPages}
+      // @ts-ignore
+      page={credentials.data.page}
+      onPageChange={(page) => setParams({ ...params, page })}
+    />
+  );
+};
+
+export const CredentialsContainer = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  return (
+    <>
+      <EntityContainer
+        header={<CredentialsHeader />}
+        search={<CredentialsSearch />}
+        pagination={<CredentialsPagination />}
+      >
+        {children}
+      </EntityContainer>
+    </>
+  );
+};
+
+export const CredentialsLoading = () => {
+  return <LoadingView entity="credentials" />;
+};
+export const credentialsError = () => {
+  return <ErrorView message="Error loading credentials !" />;
+};
+
+export const CredentialsEmpty = () => {
+  const createcredential = useCreateCredential();
+  const { handleError, modal } = useUpgradeModal();
+  const router = useRouter();
+  // const handleCreate = (values) => {
+  //   createcredential.mutate(values, {
+  //     onError: handleError,
+  //     onSuccess: (data) => router.push(`/credentials/${data.id}`),
+  //   });
+  // };
+
+  return (
+    <>
+      {modal}
+      <EmptyView
+        message="You have not created any new credentials. Get started by creating your first credential."
+        // onNew={() => }
+      />
+    </>
+  );
+};
+
+export const CredentialItem = ({ data }: { data: Credential }) => {
+  const removecredential = useRemoveCredential();
+
+  const handleRemove = () => {
+    removecredential.mutate({
+      id: data.id,
+    });
+  };
+
+  return (
+    <EntityItem
+      href={`/credentials/${data.id}`}
+      title={data.name}
+      subtitle={
+        <>
+          <p className="text-muted-foreground text-xs">
+            Updated {formatDistanceToNow(data.updatedAt, { addSuffix: true })}{" "}
+            &bull; Created{" "}
+            {formatDistanceToNow(data.createdAt, { addSuffix: true })} {""}
+          </p>
+        </>
+      }
+      image={
+        <div className="size-8 flex items-center justify-center">
+          {" "}
+          <KeyIcon className="size-5 text-muted-foreground" />
+        </div>
+      }
+      onRemove={handleRemove}
+      isRemoving={false}
+    />
+  );
+};

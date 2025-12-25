@@ -22,14 +22,16 @@ export default async function Page({ searchParams }: Props) {
   prefetchWorkFlows(params);
 
   return (
-    <WorkFlowsContainer>
-      <HydrateClient>
-        <ErrorBoundary fallback={<WorkFlowsError />}>
+    <div className="bg-background to-card w-full rounded-3xl">
+      <WorkFlowsContainer>
+        <HydrateClient>
           <Suspense fallback={<WorkFlowsLoading />}>
-            <WorkFlowsList />
+            <ErrorBoundary fallback={<WorkFlowsError />}>
+              <WorkFlowsList />
+            </ErrorBoundary>
           </Suspense>
-        </ErrorBoundary>
-      </HydrateClient>
-    </WorkFlowsContainer>
+        </HydrateClient>
+      </WorkFlowsContainer>
+    </div>
   );
 }

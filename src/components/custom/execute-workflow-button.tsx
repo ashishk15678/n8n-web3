@@ -13,7 +13,12 @@ export const ExecuteWorkflowButton = ({
   };
 
   return (
-    <Button size={"lg"} className="" disabled={false} onClick={handleExecute}>
+    <Button
+      size={"lg"}
+      variant={"outline"}
+      disabled={false}
+      onClick={handleExecute}
+    >
       <FlaskRoundIcon className="size-4" />
       Execute workflow
     </Button>
