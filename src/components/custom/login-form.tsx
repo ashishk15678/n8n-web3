@@ -68,7 +68,10 @@ export default function LoginForm() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="text-black">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="text-primary"
+            >
               <div className="grid gap-6">
                 <div className="flex flex-col gap-2">
                   <Button
