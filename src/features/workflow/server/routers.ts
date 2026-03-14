@@ -34,12 +34,12 @@ export const WorkFlowsRouter = createTrpcRouter({
     }),
   create: protectedProcedure.mutation(async ({ ctx }) => {
     const workflows = await prisma.workflow.count();
-    if (workflows > NON_PREMIUM_LIMIT.MAX_WORKFLOWS) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: `needs to have premium to create more than ${NON_PREMIUM_LIMIT.MAX_WORKFLOWS} workflows.`,
-      });
-    }
+    // if (workflows > NON_PREMIUM_LIMIT.MAX_WORKFLOWS) {
+    //   throw new TRPCError({
+    //     code: "FORBIDDEN",
+    //     message: `needs to have premium to create more than ${NON_PREMIUM_LIMIT.MAX_WORKFLOWS} workflows.`,
+    //   });
+    // }
     return prisma.workflow.create({
       data: {
         name: generateSlug(3),
